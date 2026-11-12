@@ -30,6 +30,8 @@ export function usageMonth(date: Date): string {
 export interface UsageGuard {
   /** Call this BEFORE every Google request. Throws QuotaExceededError instead of going over the cap. */
   consume(api: GoogleApi, units?: number): Promise<void>;
+  /** Gives units back for a call that Google rejected and therefore did not bill. */
+  refund(api: GoogleApi, units?: number): Promise<void>;
   usage(): Promise<Record<GoogleApi, number>>;
 }
 
@@ -53,6 +55,13 @@ export function createUsageGuard(deps: { db: Db; caps: QuotaCaps; now?: () => Da
           WHERE api_usage.used + ${units} <= ${cap}
         RETURNING used`);
       if (result.rows.length === 0) throw new QuotaExceededError(api);
+    },
+
+    async refund(api, units = 1) {
+      await db.execute(sql`
+        UPDATE api_usage
+        SET used = GREATEST(used - ${units}, 0)
+        WHERE api = ${api} AND month = ${usageMonth(now())}`);
     },
 
     async usage() {
