@@ -19,6 +19,8 @@ export interface Stage {
   stayMinutes: number;
   /** No window means always open. */
   window?: TimeWindow;
+  /** The place is closed on the whole day. It stays in the route, flagged, never dropped. */
+  closedAllDay?: boolean;
 }
 
 /**
@@ -50,7 +52,9 @@ export type Violation =
   /** The visit would end after the place closes. */
   | { stageId: string; kind: 'closed'; minutesLate: number }
   /** The stay is longer than the opening window itself; no order can fix it. */
-  | { stageId: string; kind: 'window_too_short' };
+  | { stageId: string; kind: 'window_too_short' }
+  /** The place is closed on this whole day; no order can fix it. */
+  | { stageId: string; kind: 'closed_all_day' };
 
 export interface SolveResult {
   /** Stage ids in visiting order. Never missing a stage. */
