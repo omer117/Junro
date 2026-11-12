@@ -1,5 +1,5 @@
-import { evaluateOrder } from './evaluate.js';
-import type { SolveInput, SolveResult } from './types.js';
+import { evaluateOrder, serviceStartFor } from './evaluate.js';
+import type { SolveInput, SolveResult, Stage } from './types.js';
 
 /**
  * Finds the order of stages that gets us to the end point as early as possible.
@@ -25,8 +25,8 @@ export function solve(input: SolveInput): SolveResult {
 
   for (let j = 0; j < n; j++) {
     const stage = stages[j]!;
-    best[(1 << j) * n + j] =
-      startTime + travelTime(start, stage.location, startTime) + stage.stayMinutes;
+    const leave = leaveTime(stage, startTime + travelTime(start, stage.location, startTime));
+    if (leave !== Infinity) best[(1 << j) * n + j] = leave;
   }
 
   for (let mask = 1; mask <= full; mask++) {
@@ -38,10 +38,10 @@ export function solve(input: SolveInput): SolveResult {
       for (let next = 0; next < n; next++) {
         if (mask & (1 << next)) continue;
         const target = stages[next]!;
-        const leaveNext =
-          leaveLast +
-          travelTime(stages[last]!.location, target.location, leaveLast) +
-          target.stayMinutes;
+        const leaveNext = leaveTime(
+          target,
+          leaveLast + travelTime(stages[last]!.location, target.location, leaveLast),
+        );
         const index = (mask | (1 << next)) * n + next;
         if (leaveNext < best[index]!) {
           best[index] = leaveNext;
@@ -63,6 +63,8 @@ export function solve(input: SolveInput): SolveResult {
     }
   }
 
+  if (bestEnd === Infinity) throw new Error('No order fits every opening window');
+
   // Walk the `previous` pointers backwards to rebuild the order.
   const order: string[] = [];
   let mask = full;
@@ -76,4 +78,14 @@ export function solve(input: SolveInput): SolveResult {
   order.reverse();
 
   return evaluateOrder(input, order);
+}
+
+/**
+ * When we leave a stage if we arrive at `arrival`: wait for it to open, stay,
+ * and leave. Infinity means the visit would end after the place closes, so
+ * this transition is infeasible and the DP never takes it.
+ */
+function leaveTime(stage: Stage, arrival: number): number {
+  const leave = serviceStartFor(stage, arrival) + stage.stayMinutes;
+  return stage.window && leave > stage.window.close ? Infinity : leave;
 }

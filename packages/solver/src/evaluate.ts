@@ -1,4 +1,9 @@
-import type { SolveInput, SolveResult, Visit } from './types.js';
+import type { Minutes, SolveInput, SolveResult, Stage, Visit } from './types.js';
+
+/** When service can start: on arrival, or when the place opens if we are early (we wait). */
+export function serviceStartFor(stage: Stage, arrival: Minutes): Minutes {
+  return stage.window ? Math.max(arrival, stage.window.open) : arrival;
+}
 
 /**
  * Walks a given order and computes the timeline: when we arrive at each stage,
@@ -20,8 +25,9 @@ export function evaluateOrder(input: SolveInput, order: string[]): SolveResult {
     if (!stage) throw new Error(`Unknown stage id: ${id}`);
 
     const arrival = time + input.travelTime(position, stage.location, time);
-    const departure = arrival + stage.stayMinutes;
-    visits.push({ stageId: id, arrival, serviceStart: arrival, departure, waited: 0 });
+    const serviceStart = serviceStartFor(stage, arrival);
+    const departure = serviceStart + stage.stayMinutes;
+    visits.push({ stageId: id, arrival, serviceStart, departure, waited: serviceStart - arrival });
 
     position = stage.location;
     time = departure;
