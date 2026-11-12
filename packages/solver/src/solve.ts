@@ -1,5 +1,6 @@
 import { evaluateOrder, latenessOf, serviceStartFor } from './evaluate.js';
 import type { SolveInput, SolveResult } from './types.js';
+import { UnreachableError, validateInput } from './validate.js';
 
 /**
  * One way of reaching a state. A state is (set of visited stages, last stage).
@@ -28,6 +29,7 @@ interface Label {
  */
 export function solve(input: SolveInput): SolveResult {
   const { stages, start, end, startTime, travelTime } = input;
+  validateInput(input);
   const n = stages.length;
   if (n === 0) return evaluateOrder(input, []);
 
@@ -36,6 +38,8 @@ export function solve(input: SolveInput): SolveResult {
 
   /** Visit `stages[next]` after arriving at `arrival`, coming from `parent`. */
   const visit = (parent: Label | null, mask: number, next: number, arrival: number) => {
+    // Infinity / NaN means no route: this leg does not exist.
+    if (!Number.isFinite(arrival)) return;
     const target = stages[next]!;
     const leave = serviceStartFor(target, arrival) + target.stayMinutes;
     const lateness = (parent?.lateness ?? 0) + latenessOf(target, leave);
@@ -69,6 +73,7 @@ export function solve(input: SolveInput): SolveResult {
   for (let last = 0; last < n; last++) {
     for (const label of states[full * n + last]!) {
       const arrive = label.leave + travelTime(stages[last]!.location, end, label.leave);
+      if (!Number.isFinite(arrive)) continue;
       if (
         !winner ||
         label.lateness < winner.lateness ||
@@ -80,9 +85,12 @@ export function solve(input: SolveInput): SolveResult {
     }
   }
 
+  if (!winner) throw new UnreachableError();
+
   // Follow the parent links backwards to rebuild the order.
   const order: string[] = [];
-  for (let label = winner; label; label = label.parent) order.push(stages[label.stage]!.id);
+  for (let label: Label | null = winner; label; label = label.parent)
+    order.push(stages[label.stage]!.id);
   order.reverse();
 
   return evaluateOrder(input, order);

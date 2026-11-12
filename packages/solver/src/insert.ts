@@ -1,6 +1,6 @@
 import { evaluateOrder } from './evaluate.js';
 import type { SolveInput, SolveResult, Stage } from './types.js';
-import { InvalidInputError } from './validate.js';
+import { InvalidInputError, validateInput } from './validate.js';
 
 /**
  * Minimal change: add one stage to an existing order without reordering anything.
@@ -15,6 +15,7 @@ export function insertStage(
   newStage: Stage,
 ): SolveResult {
   const withNew: SolveInput = { ...input, stages: [...input.stages, newStage] };
+  validateInput(withNew);
 
   let best: SolveResult | null = null;
   for (let position = 0; position <= currentOrder.length; position++) {
