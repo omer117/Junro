@@ -133,6 +133,8 @@ export const stages = pgTable(
     /** Manual override for this one stage; wins over the user's preference. */
     stayOverrideMinutes: integer('stay_override_minutes'),
     done: boolean('done').notNull().default(false),
+    /** Place in the solved route (0 = first). null until the day has been solved. */
+    position: integer('position'),
     createdAt: createdAt(),
   },
   (t) => [index('stages_day_idx').on(t.dayId)],
