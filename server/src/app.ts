@@ -5,6 +5,7 @@ import type { Db } from './db/client.js';
 import { authRoutes } from './auth/routes.js';
 import { createPassport } from './auth/passport.js';
 import { errorHandler, notFound } from './errors.js';
+import { tripsRouter } from './routes/trips.js';
 
 export interface AppDeps {
   db: Db;
@@ -56,6 +57,8 @@ export function createApp(deps: AppDeps): Express {
       clientUrl: deps.clientUrl ?? '/',
     }),
   );
+
+  app.use('/trips', tripsRouter(deps.db));
 
   app.use(notFound);
   app.use(errorHandler);
