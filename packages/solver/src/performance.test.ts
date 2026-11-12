@@ -1,4 +1,3 @@
-import { performance } from 'node:perf_hooks';
 import { describe, expect, it } from 'vitest';
 import { solve } from './solve.js';
 import { lineTravel, loc, seededRandom, stageAt } from './test-utils.js';
