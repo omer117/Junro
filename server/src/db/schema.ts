@@ -149,3 +149,15 @@ export const routeMatrixCache = pgTable(
   },
   (t) => [primaryKey({ columns: [t.dayId, t.travelMode] })],
 );
+
+/** How many Google calls (or billable units) we used in a month, per API. See google/guard.ts. */
+export const apiUsage = pgTable(
+  'api_usage',
+  {
+    api: text('api').notNull(),
+    /** 'YYYY-MM' in Pacific time, the month Google bills by. */
+    month: text('month').notNull(),
+    used: integer('used').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.api, t.month] })],
+);

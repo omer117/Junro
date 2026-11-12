@@ -46,4 +46,37 @@ describe('loadConfig', () => {
   it('uses secure cookies in production', () => {
     expect(loadConfig({ ...base, NODE_ENV: 'production' }).secureCookies).toBe(true);
   });
+
+  describe('Google API access', () => {
+    it('has no API key by default, and caps well below the free tiers', () => {
+      const config = loadConfig(base);
+
+      expect(config.googleApiKey).toBeUndefined();
+      expect(config.quotaCaps).toEqual({
+        autocomplete: 5000,
+        placeDetails: 800,
+        routeMatrix: 4000,
+        computeRoutes: 4000,
+      });
+    });
+
+    it('reads the API key and lets each cap be changed', () => {
+      const config = loadConfig({
+        ...base,
+        GOOGLE_API_KEY: 'key-123',
+        GOOGLE_CAP_PLACE_DETAILS: '50',
+        GOOGLE_CAP_AUTOCOMPLETE: '0',
+      });
+
+      expect(config.googleApiKey).toBe('key-123');
+      expect(config.quotaCaps.placeDetails).toBe(50);
+      expect(config.quotaCaps.autocomplete).toBe(0);
+    });
+
+    it.each(['abc', '-5', '1.5', ''])('rejects the cap value %j', (value) => {
+      expect(() => loadConfig({ ...base, GOOGLE_CAP_ROUTE_MATRIX: value })).toThrow(
+        /GOOGLE_CAP_ROUTE_MATRIX/,
+      );
+    });
+  });
 });
