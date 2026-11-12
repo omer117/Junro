@@ -1,0 +1,16 @@
+{
+  "name": "junro",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "client",
+    "server",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
