@@ -46,4 +46,30 @@ describe('when Google rejects a request', () => {
     expect(error.message).toBe('Google rejected the request.');
     expect(JSON.stringify(error)).not.toContain('PERMISSION_DENIED');
   });
+
+  it('also reads an error that Google wraps in a list, or sends as plain text', async () => {
+    const wrapped = vi.fn(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify([{ error: { status: 'PERMISSION_DENIED', message: 'Routes disabled' } }]),
+          {
+            status: 403,
+          },
+        ),
+    );
+    const plain = vi.fn(
+      async (_url: string, _init?: RequestInit) => new Response('Forbidden', { status: 403 }),
+    );
+    const log = vi.fn();
+
+    for (const fetch of [wrapped, plain]) {
+      const client = createHttpMapsClient({ apiKey: 'K', fetch, log });
+      await client
+        .routeMatrix({ origins: [point], destinations: [point], mode: 'walking' })
+        .catch(() => undefined);
+    }
+
+    expect(String(log.mock.calls[0]![0])).toContain('Routes disabled');
+    expect(String(log.mock.calls[1]![0])).toContain('Forbidden');
+  });
 });

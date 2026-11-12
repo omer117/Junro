@@ -28,13 +28,25 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
 
   /** Google's explanation (status and message), shortened, with our API key taken out. */
   async function reason(response: Response): Promise<string> {
+    let raw: string;
     try {
-      const body = (await response.json()) as { error?: { status?: string; message?: string } };
-      const text = `${body.error?.status ?? ''} ${body.error?.message ?? ''}`.trim();
-      return text.split(apiKey).join('[key removed]').slice(0, 400);
+      raw = await response.text();
     } catch {
       return '(no details)';
     }
+
+    // Google usually sends { error: { status, message } }, sometimes wrapped in a list.
+    let text = raw.trim();
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      const body = (Array.isArray(parsed) ? parsed[0] : parsed) as
+        { error?: { status?: string; message?: string } } | undefined;
+      const known = `${body?.error?.status ?? ''} ${body?.error?.message ?? ''}`.trim();
+      if (known) text = known;
+    } catch {
+      // not JSON: the raw text is all we have
+    }
+    return (text || '(empty response)').split(apiKey).join('[key removed]').slice(0, 400);
   }
 
   /**
