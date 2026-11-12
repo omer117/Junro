@@ -1,0 +1,21 @@
+# Local development database. Not used in production.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: junro
+      POSTGRES_PASSWORD: junro
+      POSTGRES_DB: junro
+    ports:
+      - '5434:5432' # 5434 on the host so it does not clash with other local databases
+    volumes:
+      - junro-pgdata:/var/lib/postgresql/data
+      - ./docker/create-test-db.sql:/docker-entrypoint-initdb.d/create-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U junro']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  junro-pgdata:

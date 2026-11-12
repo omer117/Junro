@@ -1,0 +1,151 @@
+import { sql } from 'drizzle-orm';
+import {
+  boolean,
+  date,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core';
+
+/** The fixed list of stage categories (hardcoded on purpose, see the spec). */
+export const CATEGORIES = [
+  'restaurant',
+  'cafe',
+  'bar',
+  'temple',
+  'museum',
+  'market',
+  'park',
+  'shop',
+  'viewpoint',
+  'other',
+] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+export const TRAVEL_MODES = ['walking', 'driving'] as const;
+export type TravelMode = (typeof TRAVEL_MODES)[number];
+
+export const categoryEnum = pgEnum('category', CATEGORIES);
+export const travelModeEnum = pgEnum('travel_mode', TRAVEL_MODES);
+
+const id = () =>
+  uuid('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`);
+const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
+
+export const users = pgTable(
+  'users',
+  {
+    id: id(),
+    /** Which sign-in provider ('google' in beta). More providers need no schema change. */
+    provider: text('provider').notNull(),
+    /** The user's id at that provider. */
+    providerId: text('provider_id').notNull(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [unique('users_provider_identity').on(t.provider, t.providerId)],
+);
+
+/** A user's own default stay per category. Never below the system minimum (enforced in the API). */
+export const categoryPreferences = pgTable(
+  'category_preferences',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    category: categoryEnum('category').notNull(),
+    stayMinutes: integer('stay_minutes').notNull(),
+  },
+  (t) => [unique('category_preferences_user_category').on(t.userId, t.category)],
+);
+
+export const trips = pgTable(
+  'trips',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('trips_user_idx').on(t.userId)],
+);
+
+export const days = pgTable(
+  'days',
+  {
+    id: id(),
+    tripId: uuid('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    date: date('date').notNull(),
+    startLat: doublePrecision('start_lat').notNull(),
+    startLng: doublePrecision('start_lng').notNull(),
+    endLat: doublePrecision('end_lat').notNull(),
+    endLng: doublePrecision('end_lng').notNull(),
+    /** Minutes since midnight, same unit as the solver. */
+    startTime: integer('start_time').notNull(),
+    travelMode: travelModeEnum('travel_mode').notNull(),
+  },
+  (t) => [index('days_trip_idx').on(t.tripId)],
+);
+
+/** Google place data, fetched once and shared by every user (protects the free tier). */
+export const places = pgTable('places', {
+  id: id(),
+  googlePlaceId: text('google_place_id').notNull().unique(),
+  name: text('name').notNull(),
+  lat: doublePrecision('lat').notNull(),
+  lng: doublePrecision('lng').notNull(),
+  /** Raw opening hours from Google; parsed into time windows per date at solve time. */
+  openingHours: jsonb('opening_hours'),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const stages = pgTable(
+  'stages',
+  {
+    id: id(),
+    dayId: uuid('day_id')
+      .notNull()
+      .references(() => days.id, { onDelete: 'cascade' }),
+    placeId: uuid('place_id')
+      .notNull()
+      .references(() => places.id, { onDelete: 'restrict' }),
+    category: categoryEnum('category').notNull(),
+    /** Manual override for this one stage; wins over the user's preference. */
+    stayOverrideMinutes: integer('stay_override_minutes'),
+    done: boolean('done').notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index('stages_day_idx').on(t.dayId)],
+);
+
+/** Route matrix for a day, cached so we do not pay Google twice for the same inputs. */
+export const routeMatrixCache = pgTable(
+  'route_matrix_cache',
+  {
+    dayId: uuid('day_id')
+      .notNull()
+      .references(() => days.id, { onDelete: 'cascade' }),
+    travelMode: travelModeEnum('travel_mode').notNull(),
+    /** Hash of the places in the matrix; a different set of stages means a different matrix. */
+    inputHash: text('input_hash').notNull(),
+    matrix: jsonb('matrix').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.dayId, t.travelMode] })],
+);
