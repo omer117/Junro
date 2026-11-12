@@ -1,3 +1,9 @@
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/figtree';
+import '@fontsource/noto-sans-jp';
+import './styles/tokens.css';
+import './styles/base.css';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
