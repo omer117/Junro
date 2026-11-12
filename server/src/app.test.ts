@@ -2,20 +2,24 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { createApp } from './app.js';
+import { createDb } from './db/client.js';
+import { testDatabaseUrl } from './db/test-db.js';
+import { createTestApp } from './test-app.js';
 import { HttpError, errorHandler, notFound } from './errors.js';
 import { validateBody } from './validate.js';
 
+const { db } = createDb(testDatabaseUrl);
+
 describe('app', () => {
   it('GET /health answers ok', async () => {
-    const res = await request(createApp()).get('/health');
+    const res = await request(createTestApp(db)).get('/health');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok' });
   });
 
   it('unknown routes get a JSON 404', async () => {
-    const res = await request(createApp()).get('/nope');
+    const res = await request(createTestApp(db)).get('/nope');
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: { code: 'not_found', message: 'Route not found' } });
