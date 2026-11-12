@@ -59,6 +59,46 @@ npm run dev -w @junro/server      # http://localhost:3000/health
 3. Put the client ID and secret in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `GOOGLE_CALLBACK_URL`). Without them the server runs, and `/auth/google` answers 503.
 
+## Google Maps Platform (places and routes)
+
+The server uses the Places API (New) for search and place details, and the Routes API for
+travel times and the route line. The API key lives only on the server (`GOOGLE_API_KEY`).
+
+**Protecting the free tier.** Google gives a free monthly allowance per product (check the
+current numbers on the
+[pricing list](https://developers.google.com/maps/billing-and-pricing/pricing): at the time of
+writing 10,000 / 5,000 / 1,000 calls for Essentials / Pro / Enterprise products). Place Details
+with opening hours is an Enterprise product, so only 1,000 per month are free. Junro protects
+itself in layers:
+
+1. Every Google call goes through a usage guard that counts per API and per month (Pacific
+   time, like Google's billing) and refuses before the cap. Defaults sit well below the free
+   tiers; change them with `GOOGLE_CAP_AUTOCOMPLETE`, `GOOGLE_CAP_PLACE_DETAILS`,
+   `GOOGLE_CAP_ROUTE_MATRIX` (counted in matrix elements) and `GOOGLE_CAP_COMPUTE_ROUTES`.
+   A cap of `0` switches that API off.
+2. A place is fetched from Google once and stored; search results are cached for 10 minutes;
+   travel times are cached per day and only new points are requested; an unchanged route
+   line is never requested again; every call asks only for the fields it needs.
+3. Per-user rate limits on search, new places and solving.
+4. Hard quotas in Google Cloud (below), as the last line of defence if the code has a bug.
+
+### One-time setup in Google Cloud (manual)
+
+Use the same project as the sign-in. Menu names change from time to time.
+
+1. **Enable the APIs:** APIs & Services, Library. Enable **Places API (New)** and
+   **Routes API**.
+2. **Billing:** Google requires a billing account for Maps Platform even for the free tier.
+   Billing, Budgets & alerts, create a budget of a few dollars with alerts at 50%, 90% and
+   100%. A budget only warns; it does not stop spending. The quotas in step 4 do.
+3. **API key:** APIs & Services, Credentials, Create credentials, API key. Under "API
+   restrictions" choose "Restrict key" and select only Places API (New) and Routes API. Put
+   the key in `.env` as `GOOGLE_API_KEY`. Never commit it, never send it to the browser.
+4. **Hard quotas:** APIs & Services, open each API, Quotas & System Limits. Lower the daily
+   limit of every request type to roughly the monthly cap divided by 30, so a bug cannot burn
+   the whole month in a day. Keep them below the free allowance.
+5. Check the usage page of each API a few days after you start using Junro.
+
 ## License
 
 No license. The code is public to read; all rights reserved.
