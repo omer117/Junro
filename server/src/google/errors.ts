@@ -28,6 +28,14 @@ export class GoogleRejectedError extends HttpError {
   }
 }
 
+/** Google says there is no place with that id. */
+export class GooglePlaceNotFoundError extends HttpError {
+  constructor() {
+    super(404, 'place_not_found', 'That place could not be found.');
+    this.name = 'GooglePlaceNotFoundError';
+  }
+}
+
 /** No API key is configured on the server. */
 export class GoogleNotConfiguredError extends HttpError {
   constructor() {

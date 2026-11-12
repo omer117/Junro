@@ -15,5 +15,8 @@ export function fakeMaps(overrides: Partial<MapsClient> = {}): FakeMaps {
     autocomplete: vi.fn<MapsClient['autocomplete']>(
       overrides.autocomplete ?? unexpected('autocomplete'),
     ),
+    placeDetails: vi.fn<MapsClient['placeDetails']>(
+      overrides.placeDetails ?? unexpected('placeDetails'),
+    ),
   };
 }

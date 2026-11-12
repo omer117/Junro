@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GoogleRejectedError, GoogleUnavailableError } from './errors.js';
+import { GooglePlaceNotFoundError, GoogleRejectedError, GoogleUnavailableError } from './errors.js';
 import { createHttpMapsClient } from './http-client.js';
 
 /** A fake `fetch` that records the request and answers with the given status and body. */
@@ -73,5 +73,51 @@ describe('autocomplete', () => {
 
     expect(error).toBeInstanceOf(GoogleRejectedError);
     expect(JSON.stringify(error.message)).not.toContain('SECRET-KEY');
+  });
+});
+
+describe('placeDetails', () => {
+  const details = {
+    id: 'abc',
+    displayName: { text: 'Senso-ji', languageCode: 'en' },
+    location: { latitude: 35.7148, longitude: 139.7967 },
+    regularOpeningHours: { periods: [{ open: { day: 0, hour: 6, minute: 0 } }] },
+  };
+
+  it('asks only for the fields we use, and reads them', async () => {
+    const fetch = fakeFetch(200, details);
+    const client = createHttpMapsClient({ apiKey: 'KEY', fetch });
+
+    const place = await client.placeDetails({ googlePlaceId: 'abc', sessionToken: 'session-1' });
+
+    expect(place).toEqual({
+      googlePlaceId: 'abc',
+      name: 'Senso-ji',
+      lat: 35.7148,
+      lng: 139.7967,
+      openingHours: details.regularOpeningHours,
+    });
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(String(url)).toBe('https://places.googleapis.com/v1/places/abc?sessionToken=session-1');
+    expect(init?.method).toBe('GET');
+    const headers = init?.headers as Record<string, string>;
+    expect(headers['X-Goog-Api-Key']).toBe('KEY');
+    // The field mask decides the price: nothing beyond these four.
+    expect(headers['X-Goog-FieldMask']).toBe('id,displayName,location,regularOpeningHours');
+  });
+
+  it('gives null opening hours when Google has none', async () => {
+    const withoutHours = { ...details, regularOpeningHours: undefined };
+    const client = createHttpMapsClient({ apiKey: 'K', fetch: fakeFetch(200, withoutHours) });
+
+    expect((await client.placeDetails({ googlePlaceId: 'abc' })).openingHours).toBeNull();
+  });
+
+  it.each([400, 404])('reports status %i as a place that does not exist', async (status) => {
+    const client = createHttpMapsClient({ apiKey: 'K', fetch: fakeFetch(status, {}) });
+
+    await expect(client.placeDetails({ googlePlaceId: 'nope-nope-nope' })).rejects.toThrow(
+      GooglePlaceNotFoundError,
+    );
   });
 });

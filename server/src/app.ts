@@ -28,6 +28,8 @@ export interface AppDeps {
   quotaCaps?: QuotaCaps;
   /** Place searches allowed per user per minute. */
   searchRateLimit?: number;
+  /** New places (Place Details fetches) allowed per user per minute. */
+  placeRateLimit?: number;
   /** Lets tests mount extra routes after sign-in is set up and before the real routes. */
   beforeRoutes?: (app: Express) => void;
 }
@@ -79,8 +81,10 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(
     placesRouter({
+      db: deps.db,
       maps,
       searchLimiter: createRateLimiter({ limit: deps.searchRateLimit ?? 30, windowMs: 60_000 }),
+      placeLimiter: createRateLimiter({ limit: deps.placeRateLimit ?? 20, windowMs: 60_000 }),
     }),
   );
   app.use(daysRouter(deps.db));

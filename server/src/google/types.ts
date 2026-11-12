@@ -5,6 +5,24 @@ export interface PlaceSuggestion {
   text: string;
 }
 
+/** Opening hours exactly as Google sends them (regularOpeningHours). Weekdays: 0 = Sunday. */
+export interface OpeningHours {
+  periods?: Array<{
+    open: { day: number; hour: number; minute: number };
+    /** Missing for a place that is open around the clock. */
+    close?: { day: number; hour: number; minute: number };
+  }>;
+}
+
+export interface PlaceDetails {
+  googlePlaceId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  /** null when Google has no opening hours for the place. */
+  openingHours: OpeningHours | null;
+}
+
 /**
  * Everything the server asks of Google, as plain functions. The real implementation talks
  * HTTP (http-client.ts); tests use a fake (test-maps.ts). Whatever uses this never knows
@@ -12,4 +30,6 @@ export interface PlaceSuggestion {
  */
 export interface MapsClient {
   autocomplete(input: { query: string; sessionToken: string }): Promise<PlaceSuggestion[]>;
+  /** Billed per call, so callers fetch a place once and store it. */
+  placeDetails(input: { googlePlaceId: string; sessionToken?: string }): Promise<PlaceDetails>;
 }

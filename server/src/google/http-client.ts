@@ -1,7 +1,15 @@
-import { GoogleRejectedError, GoogleUnavailableError } from './errors.js';
-import type { MapsClient, PlaceSuggestion } from './types.js';
+import { GooglePlaceNotFoundError, GoogleRejectedError, GoogleUnavailableError } from './errors.js';
+import type { MapsClient, OpeningHours, PlaceSuggestion } from './types.js';
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+
+/** What Google sends for a place, limited to the fields we ask for. */
+interface RawPlace {
+  id: string;
+  displayName?: { text?: string };
+  location: { latitude: number; longitude: number };
+  regularOpeningHours?: OpeningHours;
+}
 
 export interface HttpMapsClientOptions {
   apiKey: string;
@@ -15,18 +23,25 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
   const { apiKey, timeoutMs = 8000 } = options;
   const fetchFn: FetchFn = options.fetch ?? ((url, init) => fetch(url, init));
 
-  /** One Google request. Any failure becomes one of our two clear errors. */
-  async function post(url: string, body: unknown, fieldMask?: string): Promise<unknown> {
+  /**
+   * One Google request. Any failure becomes one of our clear errors. `notFoundStatuses` are
+   * the statuses that mean "no such thing" for this particular call.
+   */
+  async function call(
+    method: 'GET' | 'POST',
+    url: string,
+    options: { body?: unknown; fieldMask?: string; notFoundStatuses?: number[] } = {},
+  ): Promise<unknown> {
     let response: Response;
     try {
       response = await fetchFn(url, {
-        method: 'POST',
+        method,
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': apiKey,
-          ...(fieldMask ? { 'X-Goog-FieldMask': fieldMask } : {}),
+          ...(options.fieldMask ? { 'X-Goog-FieldMask': options.fieldMask } : {}),
         },
-        body: JSON.stringify(body),
+        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
         signal: AbortSignal.timeout(timeoutMs), // never wait forever
       });
     } catch {
@@ -35,6 +50,7 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
 
     // Google's own error text can repeat our key back, so it is never passed on.
     if (response.status >= 500 || response.status === 429) throw new GoogleUnavailableError();
+    if (options.notFoundStatuses?.includes(response.status)) throw new GooglePlaceNotFoundError();
     if (!response.ok) throw new GoogleRejectedError(response.status);
 
     try {
@@ -46,9 +62,8 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
 
   return {
     async autocomplete({ query, sessionToken }) {
-      const data = (await post('https://places.googleapis.com/v1/places:autocomplete', {
-        input: query,
-        sessionToken,
+      const data = (await call('POST', 'https://places.googleapis.com/v1/places:autocomplete', {
+        body: { input: query, sessionToken },
       })) as {
         suggestions?: Array<{ placePrediction?: { placeId: string; text?: { text?: string } } }>;
       };
@@ -61,6 +76,28 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
         }
       }
       return result;
+    },
+
+    async placeDetails({ googlePlaceId, sessionToken }) {
+      const query = sessionToken ? `?sessionToken=${encodeURIComponent(sessionToken)}` : '';
+      const data = (await call(
+        'GET',
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}${query}`,
+        {
+          // The field mask decides the price. Opening hours put this call in the Enterprise tier
+          // (1,000 free per month), which is why a place is fetched once and then stored.
+          fieldMask: 'id,displayName,location,regularOpeningHours',
+          notFoundStatuses: [400, 404],
+        },
+      )) as RawPlace;
+
+      return {
+        googlePlaceId: data.id,
+        name: data.displayName?.text ?? '',
+        lat: data.location.latitude,
+        lng: data.location.longitude,
+        openingHours: data.regularOpeningHours ?? null,
+      };
     },
   };
 }

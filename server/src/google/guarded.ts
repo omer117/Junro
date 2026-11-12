@@ -11,5 +11,9 @@ export function withUsageGuard(client: MapsClient, guard: UsageGuard): MapsClien
       await guard.consume('autocomplete');
       return client.autocomplete(input);
     },
+    async placeDetails(input) {
+      await guard.consume('placeDetails');
+      return client.placeDetails(input);
+    },
   };
 }
