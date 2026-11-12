@@ -9,3 +9,5 @@ export type {
   Violation,
   Visit,
 } from './types.js';
+export { evaluateOrder } from './evaluate.js';
+export { solve } from './solve.js';
