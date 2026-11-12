@@ -1,5 +1,11 @@
 import { Route, Routes } from 'react-router';
+import { lazy, Suspense } from 'react';
 import { useMe } from './auth/useMe';
+
+// Only in `npm run dev`: a page for looking at the map while building.
+const MapDemo = import.meta.env.DEV
+  ? lazy(() => import('./map/MapDemo').then((m) => ({ default: m.MapDemo })))
+  : null;
 
 /** Placeholder screens: the real ones come in the next tasks of M4. */
 function Landing() {
@@ -48,6 +54,16 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={me.data ? <Trips name={me.data.name} /> : <Landing />} />
+      {MapDemo && (
+        <Route
+          path="/dev/map"
+          element={
+            <Suspense fallback={null}>
+              <MapDemo />
+            </Suspense>
+          }
+        />
+      )}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,0 +1,97 @@
+.map-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  background: var(--map-land);
+  overflow: hidden;
+}
+
+.map-view__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.map-view__message {
+  position: absolute;
+  inset: auto var(--space-4) var(--space-4) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  font-size: var(--text-sm);
+}
+
+/* Markers are HTML pinned to the map. `left` and `top` are set by the map. */
+.map-marker {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-body);
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* A stop, before there is a route: its category icon in a rounded square. */
+.map-marker--stop {
+  width: 44px;
+  height: 44px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-float);
+}
+
+/* A stop in the route: its number in a dark circle. */
+.map-marker--numbered {
+  width: 40px;
+  height: 40px;
+  background: var(--ink);
+  color: var(--on-ink);
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  font-size: var(--text-base);
+  box-shadow: var(--shadow-float);
+}
+
+/* A stop with a problem. The colour is backed by the warning text and icon in the timeline. */
+.map-marker--warning {
+  background: var(--warning);
+  color: var(--on-warning);
+}
+
+.map-marker--stop.map-marker--warning {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--warning);
+}
+
+/* The two ends of the day: a dark label above a small square on the exact spot. */
+.map-marker--start,
+.map-marker--end {
+  transform: translate(-50%, calc(-100% - 8px));
+  padding: var(--space-1) var(--space-3);
+  background: var(--ink);
+  color: var(--on-ink);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+}
+
+.map-marker--start::after,
+.map-marker--end::after {
+  content: '';
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--ink);
+  border: 2px solid var(--surface);
+  border-radius: 4px;
+  transform: translateX(-50%);
+}

@@ -3,6 +3,7 @@ import '@fontsource-variable/figtree';
 import '@fontsource/noto-sans-jp';
 import './styles/tokens.css';
 import './styles/base.css';
+import './map/map.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
