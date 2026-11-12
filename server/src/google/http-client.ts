@@ -16,12 +16,26 @@ export interface HttpMapsClientOptions {
   /** Replaceable so tests never touch the network. */
   fetch?: FetchFn;
   timeoutMs?: number;
+  /** Where the reason for a rejection is written for the operator. Defaults to the server log. */
+  log?: (message: string) => void;
 }
 
 /** The real Google client. The API key is added here, on the server, and goes nowhere else. */
 export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient {
   const { apiKey, timeoutMs = 8000 } = options;
+  const log = options.log ?? ((message: string) => console.error(message));
   const fetchFn: FetchFn = options.fetch ?? ((url, init) => fetch(url, init));
+
+  /** Google's explanation (status and message), shortened, with our API key taken out. */
+  async function reason(response: Response): Promise<string> {
+    try {
+      const body = (await response.json()) as { error?: { status?: string; message?: string } };
+      const text = `${body.error?.status ?? ''} ${body.error?.message ?? ''}`.trim();
+      return text.split(apiKey).join('[key removed]').slice(0, 400);
+    } catch {
+      return '(no details)';
+    }
+  }
 
   /**
    * One Google request. Any failure becomes one of our clear errors. `notFoundStatuses` are
@@ -51,7 +65,12 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
     // Google's own error text can repeat our key back, so it is never passed on.
     if (response.status >= 500 || response.status === 429) throw new GoogleUnavailableError();
     if (options.notFoundStatuses?.includes(response.status)) throw new GooglePlaceNotFoundError();
-    if (!response.ok) throw new GoogleRejectedError(response.status);
+    if (!response.ok) {
+      // The client only ever sees "Google rejected the request". The reason goes to the
+      // server log (with the key removed), so whoever runs the server can fix the setup.
+      log(`Google rejected a request (${response.status}): ${await reason(response)}`);
+      throw new GoogleRejectedError(response.status);
+    }
 
     try {
       return await response.json();
