@@ -21,5 +21,8 @@ export function fakeMaps(overrides: Partial<MapsClient> = {}): FakeMaps {
     routeMatrix: vi.fn<MapsClient['routeMatrix']>(
       overrides.routeMatrix ?? unexpected('routeMatrix'),
     ),
+    computeRoute: vi.fn<MapsClient['computeRoute']>(
+      overrides.computeRoute ?? unexpected('computeRoute'),
+    ),
   };
 }

@@ -144,5 +144,33 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
       }
       return seconds;
     },
+
+    async computeRoute({ origin, destination, intermediates, mode }) {
+      if (intermediates.length > 25) {
+        throw new RangeError('A route takes at most 25 stops in between');
+      }
+      const waypoint = (p: { lat: number; lng: number }) => ({
+        location: { latLng: { latitude: p.lat, longitude: p.lng } },
+      });
+      const data = (await call(
+        'POST',
+        'https://routes.googleapis.com/directions/v2:computeRoutes',
+        {
+          // Only the line is needed; asking for more fields would move the call to a pricier tier.
+          fieldMask: 'routes.polyline.encodedPolyline',
+          body: {
+            origin: waypoint(origin),
+            destination: waypoint(destination),
+            intermediates: intermediates.map(waypoint),
+            travelMode: mode === 'walking' ? 'WALK' : 'DRIVE',
+            ...(mode === 'driving' ? { routingPreference: 'TRAFFIC_UNAWARE' } : {}),
+          },
+        },
+      )) as { routes?: Array<{ polyline?: { encodedPolyline?: string } }> };
+
+      const line = data.routes?.[0]?.polyline?.encodedPolyline;
+      if (!line) throw new GoogleRejectedError(200);
+      return line;
+    },
   };
 }

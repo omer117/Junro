@@ -44,4 +44,11 @@ export interface MapsClient {
     destinations: LatLng[];
     mode: TravelMode;
   }): Promise<number[][]>;
+  /** The route through the stops in order, as an encoded polyline for the map. One call. */
+  computeRoute(input: {
+    origin: LatLng;
+    destination: LatLng;
+    intermediates: LatLng[];
+    mode: TravelMode;
+  }): Promise<string>;
 }

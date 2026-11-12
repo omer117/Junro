@@ -99,6 +99,10 @@ export const days = pgTable(
     /** Minutes since midnight, same unit as the solver. */
     startTime: integer('start_time').notNull(),
     travelMode: travelModeEnum('travel_mode').notNull(),
+    /** The route line for the map, kept so the same route is never bought twice. */
+    polyline: text('polyline'),
+    /** What the polyline was made for (mode + stops in order); a different key means a new line. */
+    polylineKey: text('polyline_key'),
   },
   (t) => [index('days_trip_idx').on(t.tripId)],
 );

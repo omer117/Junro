@@ -20,5 +20,9 @@ export function withUsageGuard(client: MapsClient, guard: UsageGuard): MapsClien
       await guard.consume('routeMatrix', input.origins.length * input.destinations.length);
       return client.routeMatrix(input);
     },
+    async computeRoute(input) {
+      await guard.consume('computeRoutes');
+      return client.computeRoute(input);
+    },
   };
 }
