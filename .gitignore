@@ -27,3 +27,6 @@ Thumbs.db
 # Local tooling
 .vercel/
 .claude/
+
+# Local Claude Code instructions (kept out of the repo)
+CLAUDE.md
