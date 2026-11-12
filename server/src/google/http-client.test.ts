@@ -121,3 +121,84 @@ describe('placeDetails', () => {
     );
   });
 });
+
+describe('routeMatrix', () => {
+  const a = { lat: 35.68, lng: 139.76 };
+  const b = { lat: 35.71, lng: 139.8 };
+  const answer = [
+    { originIndex: 0, destinationIndex: 0, duration: '0s', condition: 'ROUTE_EXISTS' },
+    { originIndex: 0, destinationIndex: 1, duration: '600s', condition: 'ROUTE_EXISTS' },
+    { originIndex: 1, destinationIndex: 0, duration: '660s', condition: 'ROUTE_EXISTS' },
+    { originIndex: 1, destinationIndex: 1, duration: '0s', condition: 'ROUTE_EXISTS' },
+  ];
+
+  it('sends the points and the mode, asks for only the fields we use, and returns seconds', async () => {
+    const fetch = fakeFetch(200, answer);
+    const client = createHttpMapsClient({ apiKey: 'KEY', fetch });
+
+    const seconds = await client.routeMatrix({
+      origins: [a, b],
+      destinations: [a, b],
+      mode: 'walking',
+    });
+
+    expect(seconds).toEqual([
+      [0, 600],
+      [660, 0],
+    ]);
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(String(url)).toBe('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix');
+    const headers = init?.headers as Record<string, string>;
+    expect(headers['X-Goog-FieldMask']).toBe('originIndex,destinationIndex,duration,condition');
+    const body = JSON.parse(String(init?.body));
+    expect(body.travelMode).toBe('WALK');
+    expect(body.routingPreference).toBeUndefined();
+    expect(body.origins[0]).toEqual({
+      waypoint: { location: { latLng: { latitude: 35.68, longitude: 139.76 } } },
+    });
+  });
+
+  it('uses the cheaper traffic-unaware preference for driving', async () => {
+    const fetch = fakeFetch(200, answer);
+    const client = createHttpMapsClient({ apiKey: 'KEY', fetch });
+
+    await client.routeMatrix({ origins: [a, b], destinations: [a, b], mode: 'driving' });
+
+    const body = JSON.parse(String(fetch.mock.calls[0]![1]?.body));
+    expect(body.travelMode).toBe('DRIVE');
+    expect(body.routingPreference).toBe('TRAFFIC_UNAWARE');
+  });
+
+  it('reports a pair without a route, or missing from the answer, as Infinity', async () => {
+    const client = createHttpMapsClient({
+      apiKey: 'K',
+      fetch: fakeFetch(200, [
+        { originIndex: 0, destinationIndex: 0, duration: '0s', condition: 'ROUTE_EXISTS' },
+        { originIndex: 0, destinationIndex: 1, condition: 'ROUTE_NOT_FOUND' },
+        { originIndex: 1, destinationIndex: 0, duration: '60s', condition: 'ROUTE_EXISTS' },
+      ]),
+    });
+
+    const seconds = await client.routeMatrix({
+      origins: [a, b],
+      destinations: [a, b],
+      mode: 'walking',
+    });
+
+    expect(seconds).toEqual([
+      [0, Infinity],
+      [60, Infinity],
+    ]);
+  });
+
+  it('refuses a request Google would reject, without spending a call', async () => {
+    const fetch = fakeFetch(200, []);
+    const client = createHttpMapsClient({ apiKey: 'K', fetch });
+    const many = Array.from({ length: 26 }, () => a);
+
+    await expect(
+      client.routeMatrix({ origins: many, destinations: [a], mode: 'walking' }),
+    ).rejects.toThrow(RangeError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

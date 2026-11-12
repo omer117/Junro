@@ -18,5 +18,8 @@ export function fakeMaps(overrides: Partial<MapsClient> = {}): FakeMaps {
     placeDetails: vi.fn<MapsClient['placeDetails']>(
       overrides.placeDetails ?? unexpected('placeDetails'),
     ),
+    routeMatrix: vi.fn<MapsClient['routeMatrix']>(
+      overrides.routeMatrix ?? unexpected('routeMatrix'),
+    ),
   };
 }

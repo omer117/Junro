@@ -99,5 +99,50 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
         openingHours: data.regularOpeningHours ?? null,
       };
     },
+
+    async routeMatrix({ origins, destinations, mode }) {
+      // Refuse here what Google would refuse anyway, so a bad request never spends quota.
+      if (origins.length === 0 || destinations.length === 0) return [];
+      if (origins.length > 25 || destinations.length > 25) {
+        throw new RangeError('A route matrix takes at most 25 origins and 25 destinations');
+      }
+      if (origins.length * destinations.length > 625) {
+        throw new RangeError('A route matrix takes at most 625 elements');
+      }
+
+      const waypoint = (p: { lat: number; lng: number }) => ({
+        waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } },
+      });
+      const data = (await call(
+        'POST',
+        'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix',
+        {
+          fieldMask: 'originIndex,destinationIndex,duration,condition',
+          body: {
+            origins: origins.map(waypoint),
+            destinations: destinations.map(waypoint),
+            travelMode: mode === 'walking' ? 'WALK' : 'DRIVE',
+            // Without live traffic: the cheaper tier, and traffic is not part of the beta.
+            ...(mode === 'driving' ? { routingPreference: 'TRAFFIC_UNAWARE' } : {}),
+          },
+        },
+      )) as Array<{
+        originIndex?: number;
+        destinationIndex?: number;
+        duration?: string;
+        condition?: string;
+      }>;
+
+      // Anything Google does not report as a route stays Infinity.
+      const seconds = origins.map(() => destinations.map(() => Infinity));
+      for (const element of Array.isArray(data) ? data : []) {
+        if (element.condition === 'ROUTE_EXISTS' && element.duration) {
+          seconds[element.originIndex ?? 0]![element.destinationIndex ?? 0] = parseFloat(
+            element.duration,
+          );
+        }
+      }
+      return seconds;
+    },
   };
 }

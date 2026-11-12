@@ -1,3 +1,6 @@
+import type { LatLng } from '@junro/solver';
+import type { TravelMode } from '../db/schema.js';
+
 /** One suggestion from the search box. */
 export interface PlaceSuggestion {
   googlePlaceId: string;
@@ -32,4 +35,13 @@ export interface MapsClient {
   autocomplete(input: { query: string; sessionToken: string }): Promise<PlaceSuggestion[]>;
   /** Billed per call, so callers fetch a place once and store it. */
   placeDetails(input: { googlePlaceId: string; sessionToken?: string }): Promise<PlaceDetails>;
+  /**
+   * Travel times in seconds: result[i][j] is origins[i] -> destinations[j], Infinity when there
+   * is no route. Billed per element (origins x destinations).
+   */
+  routeMatrix(input: {
+    origins: LatLng[];
+    destinations: LatLng[];
+    mode: TravelMode;
+  }): Promise<number[][]>;
 }

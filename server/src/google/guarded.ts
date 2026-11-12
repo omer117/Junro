@@ -15,5 +15,10 @@ export function withUsageGuard(client: MapsClient, guard: UsageGuard): MapsClien
       await guard.consume('placeDetails');
       return client.placeDetails(input);
     },
+    async routeMatrix(input) {
+      // Google bills a matrix per element, not per request.
+      await guard.consume('routeMatrix', input.origins.length * input.destinations.length);
+      return client.routeMatrix(input);
+    },
   };
 }
