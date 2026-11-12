@@ -1,8 +1,13 @@
-import type { Minutes, SolveInput, SolveResult, Stage, Visit } from './types.js';
+import type { Minutes, SolveInput, SolveResult, Stage, Violation, Visit } from './types.js';
 
 /** When service can start: on arrival, or when the place opens if we are early (we wait). */
 export function serviceStartFor(stage: Stage, arrival: Minutes): Minutes {
   return stage.window ? Math.max(arrival, stage.window.open) : arrival;
+}
+
+/** Minutes by which a visit that ends at `departure` runs past the closing time (0 if none). */
+export function latenessOf(stage: Stage, departure: Minutes): number {
+  return stage.window ? Math.max(0, departure - stage.window.close) : 0;
 }
 
 /**
@@ -19,6 +24,8 @@ export function evaluateOrder(input: SolveInput, order: string[]): SolveResult {
   let position = input.start;
   let time = input.startTime;
   const visits: Visit[] = [];
+  const violations: Violation[] = [];
+  let totalLateness = 0;
 
   for (const id of order) {
     const stage = byId.get(id);
@@ -29,6 +36,19 @@ export function evaluateOrder(input: SolveInput, order: string[]): SolveResult {
     const departure = serviceStart + stage.stayMinutes;
     visits.push({ stageId: id, arrival, serviceStart, departure, waited: serviceStart - arrival });
 
+    const minutesLate = latenessOf(stage, departure);
+    if (minutesLate > 0) {
+      totalLateness += minutesLate;
+      // A stay longer than the whole window can never be fixed by reordering.
+      const windowTooShort =
+        stage.window && stage.stayMinutes > stage.window.close - stage.window.open;
+      violations.push(
+        windowTooShort
+          ? { stageId: id, kind: 'window_too_short' }
+          : { stageId: id, kind: 'closed', minutesLate },
+      );
+    }
+
     position = stage.location;
     time = departure;
   }
@@ -37,7 +57,7 @@ export function evaluateOrder(input: SolveInput, order: string[]): SolveResult {
     order: [...order],
     visits,
     endArrival: time + input.travelTime(position, input.end, time),
-    violations: [],
-    totalLateness: 0,
+    violations,
+    totalLateness,
   };
 }
