@@ -84,7 +84,9 @@ itself in layers:
 
 ### One-time setup in Google Cloud (manual)
 
-Use the same project as the sign-in. Menu names change from time to time.
+Create a separate Google Cloud project for Maps (for example `junro-maps`): billing and quotas
+are counted per project, so keep them apart from the project that holds the sign-in client
+(the sign-in client does not need to move). Menu names change from time to time.
 
 1. **Enable the APIs:** APIs & Services, Library. Enable **Places API (New)** and
    **Routes API**.
@@ -94,9 +96,19 @@ Use the same project as the sign-in. Menu names change from time to time.
 3. **API key:** APIs & Services, Credentials, Create credentials, API key. Under "API
    restrictions" choose "Restrict key" and select only Places API (New) and Routes API. Put
    the key in `.env` as `GOOGLE_API_KEY`. Never commit it, never send it to the browser.
-4. **Hard quotas:** APIs & Services, open each API, Quotas & System Limits. Lower the daily
-   limit of every request type to roughly the monthly cap divided by 30, so a bug cannot burn
-   the whole month in a day. Keep them below the free allowance.
+4. **Hard quotas:** Google Maps Platform, Quotas (select the API at the top). Edit these
+   "per day" quotas, which start as Unlimited. Sensible values for development:
+
+   | API              | Quota                                                         | Daily limit |
+   | ---------------- | ------------------------------------------------------------- | ----------- |
+   | Routes API       | DistanceMatrix - ComputeRouteMatrix per-element quota per day | 500         |
+   | Routes API       | Directions - ComputeRoutes per request quota per day          | 100         |
+   | Places API (New) | GetPlaceRequest per day (Place Details)                       | 30          |
+   | Places API (New) | AutocompletePlacesRequest per day                             | 300         |
+
+   Optionally lower the "per minute" quotas too (they start at 3,000). These daily limits sit
+   above normal use and far below the free allowance, so a bug cannot burn the month in a day.
+
 5. Check the usage page of each API a few days after you start using Junro.
 
 ## License
