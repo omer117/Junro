@@ -1,0 +1,9 @@
+{
+  "name": "@junro/client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  }
+}
