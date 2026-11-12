@@ -7,6 +7,7 @@ import { createPassport } from './auth/passport.js';
 import { errorHandler, notFound } from './errors.js';
 import { daysRouter } from './routes/days.js';
 import { stagesRouter } from './routes/stages.js';
+import { stayDurationsRouter } from './routes/stay-durations.js';
 import { tripsRouter } from './routes/trips.js';
 
 export interface AppDeps {
@@ -64,6 +65,7 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(daysRouter(deps.db));
   app.use(stagesRouter(deps.db));
+  app.use(stayDurationsRouter(deps.db));
 
   app.use(notFound);
   app.use(errorHandler);
