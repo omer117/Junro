@@ -17,7 +17,8 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.23.1",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@junro/solver": "*"
   },
   "devDependencies": {
     "@types/connect-pg-simple": "^7.0.3",
