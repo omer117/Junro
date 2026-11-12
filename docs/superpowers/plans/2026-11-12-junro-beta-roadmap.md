@@ -120,4 +120,5 @@ two minutes.
 ## After beta (not now)
 
 Public transit, automatic stage dropping by priority, more sign-in providers, arrival
-auto-detection, per-country palettes.
+auto-detection, per-country palettes, several opening windows per stage per day (places
+that close for a lunch break; beta uses one window, earliest opening to latest closing).

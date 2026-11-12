@@ -8,6 +8,6 @@ export const testDatabaseUrl =
 /** Empties every table so each test starts from nothing. */
 export async function resetDb(db: Db): Promise<void> {
   await db.execute(
-    sql`TRUNCATE users, trips, days, stages, places, category_preferences, route_matrix_cache CASCADE`,
+    sql`TRUNCATE users, trips, days, stages, places, category_preferences, route_matrix_cache, api_usage CASCADE`,
   );
 }

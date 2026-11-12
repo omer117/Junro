@@ -3,6 +3,7 @@ import session from 'express-session';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDb } from './db/client.js';
+import { createHttpMapsClient } from './google/http-client.js';
 
 const config = loadConfig(process.env);
 const { db, pool } = createDb(config.databaseUrl);
@@ -16,6 +17,8 @@ const app = createApp({
   secureCookies: config.secureCookies,
   ...(config.google ? { google: config.google } : {}),
   clientUrl: config.clientUrl,
+  quotaCaps: config.quotaCaps,
+  ...(config.googleApiKey ? { maps: createHttpMapsClient({ apiKey: config.googleApiKey }) } : {}),
 });
 
 app.listen(config.port, () => {

@@ -60,6 +60,7 @@ describe('stages API', () => {
       category: 'temple',
       stayOverrideMinutes: null,
       done: false,
+      position: null,
       place: { id: place.id, googlePlaceId: 'p-1', name: 'Senso-ji', lat: 35.71, lng: 139.8 },
     });
   });

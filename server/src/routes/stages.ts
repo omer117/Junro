@@ -32,6 +32,7 @@ const stageWithPlace = {
   category: stages.category,
   stayOverrideMinutes: stages.stayOverrideMinutes,
   done: stages.done,
+  position: stages.position,
   place: {
     id: places.id,
     googlePlaceId: places.googlePlaceId,
@@ -61,7 +62,7 @@ export function stagesRouter(db: Db): Router {
       .from(stages)
       .innerJoin(places, eq(stages.placeId, places.id))
       .where(eq(stages.dayId, day.id))
-      .orderBy(asc(stages.createdAt), asc(stages.id));
+      .orderBy(asc(stages.position), asc(stages.createdAt), asc(stages.id));
     res.json(rows);
   });
 

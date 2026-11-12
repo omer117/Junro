@@ -99,6 +99,10 @@ export const days = pgTable(
     /** Minutes since midnight, same unit as the solver. */
     startTime: integer('start_time').notNull(),
     travelMode: travelModeEnum('travel_mode').notNull(),
+    /** The route line for the map, kept so the same route is never bought twice. */
+    polyline: text('polyline'),
+    /** What the polyline was made for (mode + stops in order); a different key means a new line. */
+    polylineKey: text('polyline_key'),
   },
   (t) => [index('days_trip_idx').on(t.tripId)],
 );
@@ -129,6 +133,8 @@ export const stages = pgTable(
     /** Manual override for this one stage; wins over the user's preference. */
     stayOverrideMinutes: integer('stay_override_minutes'),
     done: boolean('done').notNull().default(false),
+    /** Place in the solved route (0 = first). null until the day has been solved. */
+    position: integer('position'),
     createdAt: createdAt(),
   },
   (t) => [index('stages_day_idx').on(t.dayId)],
@@ -148,4 +154,16 @@ export const routeMatrixCache = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.dayId, t.travelMode] })],
+);
+
+/** How many Google calls (or billable units) we used in a month, per API. See google/guard.ts. */
+export const apiUsage = pgTable(
+  'api_usage',
+  {
+    api: text('api').notNull(),
+    /** 'YYYY-MM' in Pacific time, the month Google bills by. */
+    month: text('month').notNull(),
+    used: integer('used').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.api, t.month] })],
 );

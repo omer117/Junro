@@ -1,0 +1,28 @@
+import type { UsageGuard } from './guard.js';
+import type { MapsClient } from './types.js';
+
+/**
+ * Wraps a Google client so that every call first takes its share of the monthly budget.
+ * This is the only way routes reach Google: a call that is not allowed never leaves the server.
+ */
+export function withUsageGuard(client: MapsClient, guard: UsageGuard): MapsClient {
+  return {
+    async autocomplete(input) {
+      await guard.consume('autocomplete');
+      return client.autocomplete(input);
+    },
+    async placeDetails(input) {
+      await guard.consume('placeDetails');
+      return client.placeDetails(input);
+    },
+    async routeMatrix(input) {
+      // Google bills a matrix per element, not per request.
+      await guard.consume('routeMatrix', input.origins.length * input.destinations.length);
+      return client.routeMatrix(input);
+    },
+    async computeRoute(input) {
+      await guard.consume('computeRoutes');
+      return client.computeRoute(input);
+    },
+  };
+}
