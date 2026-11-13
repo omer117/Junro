@@ -1,5 +1,6 @@
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 import type { EngineMap, MapEngine, MapMarker, Padding } from './engine';
+import { memoizeAsync } from '../lib/memoizeAsync';
 import { MapEngineError } from './MapEngineContext';
 import { createMarkerElement } from './markerElement';
 import { mapStyle } from './mapStyle';
@@ -12,8 +13,13 @@ const ROUTE_ANIMATION_MS = 1400;
 /**
  * The real map, from the Google Maps JavaScript API. The browser key (restricted to this site
  * and to this one API) is read from the environment; without it the map explains what is missing.
+ *
+ * The library is set up once for the whole page: asking again (a second map on screen, or the
+ * same screen opened again) gets the same engine, because setOptions may only be called once.
  */
-export async function loadGoogleEngine(): Promise<MapEngine> {
+export const loadGoogleEngine = memoizeAsync(createGoogleEngine);
+
+async function createGoogleEngine(): Promise<MapEngine> {
   const key = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
   if (!key) throw new MapEngineError('not_configured');
 

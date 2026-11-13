@@ -12,7 +12,8 @@ export function useRoute(dayId: string | undefined) {
     queryKey: ['days', dayId, 'route'],
     queryFn: async (): Promise<RouteResult | null> => {
       try {
-        return await api<RouteResult>(`/days/${dayId}/route`);
+        // 204 (No Content) means the day has no route yet: the server sends nothing.
+        return (await api<RouteResult | undefined>(`/days/${dayId}/route`)) ?? null;
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) return null;
         throw error;
