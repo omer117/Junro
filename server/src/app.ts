@@ -10,6 +10,7 @@ import { createUsageGuard, type QuotaCaps } from './google/guard.js';
 import type { MapsClient } from './google/types.js';
 import { createRateLimiter } from './rate-limit.js';
 import { placesRouter } from './routes/places.js';
+import { airportsRouter } from './routes/airports.js';
 import { daysRouter } from './routes/days.js';
 import { solveRouter } from './routes/solve.js';
 import { stagesRouter } from './routes/stages.js';
@@ -81,6 +82,7 @@ export function createApp(deps: AppDeps): Express {
   );
 
   app.use('/trips', tripsRouter(deps.db));
+  app.use(airportsRouter(deps.db));
 
   app.use(
     placesRouter({

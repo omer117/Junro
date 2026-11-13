@@ -44,6 +44,7 @@ const routes: Array<{ method: 'get' | 'post' | 'patch' | 'delete'; path: string;
     { method: 'delete', path: '/stages/:stage' },
     { method: 'post', path: '/days/:day/solve', body: { mode: 'full' } },
     { method: 'get', path: '/places/search' },
+    { method: 'get', path: '/airports?q=tlv' },
     { method: 'post', path: '/places', body: { googlePlaceId: 'ChIJ-some-place-id' } },
     { method: 'get', path: '/trips' },
     { method: 'post', path: '/trips', body: { name: 'x' } },

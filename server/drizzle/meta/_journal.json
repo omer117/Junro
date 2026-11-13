@@ -36,6 +36,13 @@
       "when": 1794562006651,
       "tag": "0004_unknown_sabra",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794562248476,
+      "tag": "0005_robust_mandroid",
+      "breakpoints": true
     }
   ]
 }

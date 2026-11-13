@@ -79,6 +79,13 @@ export const trips = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    /** Where the trip starts and ends, as airports from the airports list. Optional. */
+    originAirport: text('origin_airport').references(() => airports.iataCode, {
+      onDelete: 'set null',
+    }),
+    destinationAirport: text('destination_airport').references(() => airports.iataCode, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
   },
   (t) => [index('trips_user_idx').on(t.userId)],
