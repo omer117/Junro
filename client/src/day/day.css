@@ -347,3 +347,120 @@
   border: 2px solid var(--line);
   border-radius: var(--radius-md);
 }
+
+/* "Find my route" and the answer */
+.button--wide {
+  width: 100%;
+  gap: var(--space-3);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.day-sheet__hint {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.route-summary {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.route-summary h2 {
+  font-size: var(--text-2xl);
+}
+
+.route-summary__detail {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.route-summary__note {
+  margin: 0;
+  color: var(--warning-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The line that joins the stops, behind the dots. */
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  left: 0.55rem;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.timeline__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
+  column-gap: var(--space-3);
+  align-items: center;
+}
+
+.timeline__dot {
+  z-index: 1;
+  width: 1.1rem;
+  height: 1.1rem;
+  background: var(--ink);
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  box-sizing: content-box;
+  justify-self: center;
+}
+
+.timeline__dot--hollow {
+  background: var(--surface);
+  border: 3px solid var(--ink);
+}
+
+.timeline__row--warn .timeline__dot {
+  background: var(--warning);
+}
+
+.timeline__name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.timeline__row--end .timeline__name {
+  font-weight: 500;
+}
+
+.timeline__time {
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__note {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  color: var(--warning-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.timeline__note svg {
+  flex: none;
+  margin-top: 0.15rem;
+}

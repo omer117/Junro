@@ -1,11 +1,13 @@
-import type { MapMarker } from './engine';
+import type { LatLng, MapMarker } from './engine';
 
 /** About a metre, in degrees. Closer than this is the same place on a map. */
 const SAME_SPOT = 0.00001;
 
-const sameSpot = (a: MapMarker, b: MapMarker) =>
-  Math.abs(a.position.lat - b.position.lat) < SAME_SPOT &&
-  Math.abs(a.position.lng - b.position.lng) < SAME_SPOT;
+/** True when two points are the same place on a map (within about a metre). */
+export const isSamePlace = (a: LatLng, b: LatLng) =>
+  Math.abs(a.lat - b.lat) < SAME_SPOT && Math.abs(a.lng - b.lng) < SAME_SPOT;
+
+const sameSpot = (a: MapMarker, b: MapMarker) => isSamePlace(a.position, b.position);
 
 /**
  * A day that starts and ends at the same place (the hotel) would draw two pins on top of each
