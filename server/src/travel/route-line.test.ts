@@ -6,7 +6,7 @@ import { days, trips, users } from '../db/schema.js';
 import { resetDb, testDatabaseUrl } from '../db/test-db.js';
 import { GoogleUnavailableError } from '../google/errors.js';
 import { fakeMaps } from '../test-maps.js';
-import { loadRouteLine } from './route-line.js';
+import { loadRouteLine, readRouteLine } from './route-line.js';
 
 const { db, pool } = createDb(testDatabaseUrl);
 
@@ -115,6 +115,52 @@ describe('loadRouteLine', () => {
     ).rejects.toThrow(GoogleUnavailableError);
 
     const [day] = await db.select().from(days).where(eq(days.id, dayId));
-    expect(day!.polyline).toBe('ENCODED-LINE');
+    expect(day!.routeLines.map((entry) => entry.line)).toEqual(['ENCODED-LINE']);
+  });
+
+  it('remembers the line of each route, so going back to an earlier one needs no new call', async () => {
+    const fake = fakeMaps({ computeRoute: async ({ mode }) => `line-for-${mode}` });
+    const dayId = await newDay();
+    const route = [p(0), p(10), p(30), p(0)];
+
+    await loadRouteLine({ db, maps: fake, dayId, mode: 'walking', route });
+    await loadRouteLine({ db, maps: fake, dayId, mode: 'driving', route });
+    const back = await loadRouteLine({ db, maps: fake, dayId, mode: 'walking', route });
+
+    expect(back).toBe('line-for-walking');
+    expect(fake.computeRoute).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads a remembered line without calling Google', async () => {
+    const fake = maps();
+    const dayId = await newDay();
+    const route = [p(0), p(10), p(0)];
+    await loadRouteLine({ db, maps: fake, dayId, mode: 'walking', route });
+
+    expect(await readRouteLine({ db, dayId, mode: 'walking', route })).toBe('ENCODED-LINE');
+    expect(await readRouteLine({ db, dayId, mode: 'driving', route })).toBeNull();
+    expect(
+      await readRouteLine({ db, dayId, mode: 'walking', route: [p(0), p(20), p(0)] }),
+    ).toBeNull();
+    expect(fake.computeRoute).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps only the most recent lines, so the day does not grow without end', async () => {
+    const fake = maps();
+    const dayId = await newDay();
+
+    for (let x = 1; x <= 12; x++) {
+      await loadRouteLine({ db, maps: fake, dayId, mode: 'walking', route: [p(0), p(x), p(0)] });
+    }
+
+    const [day] = await db.select().from(days).where(eq(days.id, dayId));
+    expect(day!.routeLines).toHaveLength(8);
+    // The newest is still there, the oldest is gone.
+    expect(
+      await readRouteLine({ db, dayId, mode: 'walking', route: [p(0), p(12), p(0)] }),
+    ).not.toBeNull();
+    expect(
+      await readRouteLine({ db, dayId, mode: 'walking', route: [p(0), p(1), p(0)] }),
+    ).toBeNull();
   });
 });

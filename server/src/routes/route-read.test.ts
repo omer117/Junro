@@ -82,14 +82,15 @@ describe('GET /days/:id/route (the saved route, from cached data only)', () => {
     await bob.agent.get(`/days/${day.id}/route`).expect(404);
   });
 
-  it('says there is no route before the day has been solved', async () => {
+  it('answers 204 (no route) before the day has been solved', async () => {
     const { addStage, route } = await setup();
     await addStage(10);
 
     const res = await route();
 
-    expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('no_route');
+    // "No route" is a normal answer, not an error: 204 No Content (a 404 shows as a red error in the browser).
+    expect(res.status).toBe(204);
+    expect(res.body).toEqual({});
   });
 
   it('returns the same route as the solve gave, without calling Google', async () => {
@@ -114,8 +115,9 @@ describe('GET /days/:id/route (the saved route, from cached data only)', () => {
 
     const res = await route();
 
-    expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('no_route');
+    // "No route" is a normal answer, not an error: 204 No Content (a 404 shows as a red error in the browser).
+    expect(res.status).toBe(204);
+    expect(res.body).toEqual({});
   });
 
   it('follows a change of stay without asking Google', async () => {
@@ -155,8 +157,9 @@ describe('GET /days/:id/route (the saved route, from cached data only)', () => {
 
     const res = await route();
 
-    expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('no_route');
+    // "No route" is a normal answer, not an error: 204 No Content (a 404 shows as a red error in the browser).
+    expect(res.status).toBe(204);
+    expect(res.body).toEqual({});
   });
 
   it('keeps the warnings: a stop that closes before you are done', async () => {

@@ -15,6 +15,12 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+/** A stored route line, oldest first in a day's list (a jsonb object would not keep its order). */
+export interface RouteLine {
+  fingerprint: string;
+  line: string;
+}
+
 /** The fixed list of stage categories (hardcoded on purpose, see the spec). */
 export const CATEGORIES = [
   'restaurant',
@@ -109,10 +115,11 @@ export const days = pgTable(
     /** Minutes since midnight, same unit as the solver. */
     startTime: integer('start_time').notNull(),
     travelMode: travelModeEnum('travel_mode').notNull(),
-    /** The route line for the map, kept so the same route is never bought twice. */
-    polyline: text('polyline'),
-    /** What the polyline was made for (mode + stops in order); a different key means a new line. */
-    polylineKey: text('polyline_key'),
+    /**
+     * Route lines for the map, one per route (a fingerprint of the mode and the stops in order),
+     * so the same route is never bought twice and going back to an earlier one is free.
+     */
+    routeLines: jsonb('route_lines').$type<RouteLine[]>().notNull().default([]),
   },
   (t) => [index('days_trip_idx').on(t.tripId)],
 );

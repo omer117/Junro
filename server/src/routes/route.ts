@@ -2,7 +2,6 @@ import { evaluateOrder, type SolveInput } from '@junro/solver';
 import { Router } from 'express';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { HttpError } from '../errors.js';
 import { loadDayProblem } from '../travel/day-problem.js';
 import { readCachedTravelTimes } from '../travel/matrix.js';
 import { readRouteLine } from '../travel/route-line.js';
@@ -15,7 +14,7 @@ import { requireOwnedDay } from './ownership.js';
  * out from what is saved (the order, the stays, the opening hours) and from the cached travel
  * times, so it follows edits such as a longer stay, and it NEVER calls Google or costs quota.
  * When it cannot be worked out from the cache (a new stop, a new travel mode, no solve yet),
- * the answer is 404 no_route and the person presses "Find my route".
+ * the answer is 204 (no content) and the person presses "Find my route".
  */
 export function routeRouter(db: Db): Router {
   const router = Router();
@@ -28,10 +27,12 @@ export function routeRouter(db: Db): Router {
       req.user!.id,
       day,
     );
-    const noRoute = () => new HttpError(404, 'no_route', 'This day has no route yet.');
+    // "No route yet" is a normal answer, so it is 204 (No Content), not an error: browsers show a
+    // 404 as a red error in the console every time the day screen asks.
+    const noRoute = () => res.status(204).end();
 
     // A route exists only when every stop has its place in it.
-    if (solverStages.length === 0 || savedIds.length !== rows.length) throw noRoute();
+    if (solverStages.length === 0 || savedIds.length !== rows.length) return noRoute();
 
     const travelTime = await readCachedTravelTimes({
       db,
@@ -39,7 +40,7 @@ export function routeRouter(db: Db): Router {
       mode: day.travelMode,
       points: [start, end, ...solverStages.map((s) => s.location)],
     });
-    if (!travelTime) throw noRoute();
+    if (!travelTime) return noRoute();
 
     const input: SolveInput = {
       start,
