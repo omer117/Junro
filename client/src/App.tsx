@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { useMe } from './auth/useMe';
+import { DayScreen } from './day/DayScreen';
+import { NewDayPage } from './day/NewDayPage';
 import { Landing } from './landing/Landing';
 import { TripsHome } from './trips/TripsHome';
 
@@ -37,6 +39,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={me.data ? <TripsHome /> : <Landing />} />
+      <Route path="/days/:dayId" element={me.data ? <DayScreen /> : <Landing />} />
+      <Route path="/trips/:tripId/days/new" element={me.data ? <NewDayPage /> : <Landing />} />
       {MapDemo && (
         <Route
           path="/dev/map"
