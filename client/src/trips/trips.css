@@ -387,3 +387,23 @@
   border-radius: 50%;
   color: var(--ink);
 }
+
+/* The soft travel picture behind the page */
+.travel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.travel-backdrop svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Cards float a little above the picture */
+.trips-home__empty,
+.day-card:not(.day-card--empty) {
+  box-shadow: 0 2px 14px rgb(30 27 58 / 7%);
+}

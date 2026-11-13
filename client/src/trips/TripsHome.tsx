@@ -5,6 +5,7 @@ import { todayString } from '../lib/dates';
 import { useTripDays, useTrips } from './api';
 import { BoardingPass } from './BoardingPass';
 import { DayCard } from './DayCard';
+import { TravelBackdrop } from './TravelBackdrop';
 import { TripForm } from './TripForm';
 import './trips.css';
 
@@ -21,6 +22,7 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
 
   return (
     <main className="trips-home">
+      <TravelBackdrop />
       <header className="trips-home__header">
         <h1>Your trips</h1>
         <AccountMenu />
