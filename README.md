@@ -111,6 +111,31 @@ are counted per project, so keep them apart from the project that holds the sign
 
 5. Check the usage page of each API a few days after you start using Junro.
 
+## Airports
+
+The `airports` table holds about 300 of the world's biggest and busiest airports, at least one
+for every country that has a passenger airport (236 countries). It is reference data, loaded
+from `server/data/airports.json`:
+
+```bash
+npm run db:seed:airports -w @junro/server   # safe to run again
+npm run airports:build -w @junro/server     # rebuild the list from the sources (needs internet)
+```
+
+How the list is chosen: every country gets its best airport, then the remaining places go to
+the best airports anywhere. "Best" means size class first (large, then medium, then small), then
+the number of flight routes that touch the airport. Countries with no passenger airport at all
+(Monaco, Vatican City, Liechtenstein, San Marino, Andorra and a few uninhabited territories) are
+not in the list. A country whose airports have no scheduled flights at the moment, for example
+because of war, still gets its biggest coded airport.
+
+Sources and credits:
+
+- [OurAirports](https://ourairports.com/data/), public domain: airports and countries.
+- [OpenFlights](https://openflights.org/data), Open Database License: the routes file, used only
+  to count routes per airport. It dates from 2014, so airports opened since then look quieter than
+  they are, and the order inside the list is approximate.
+
 ## License
 
 No license. The code is public to read; all rights reserved.

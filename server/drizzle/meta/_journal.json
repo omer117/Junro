@@ -29,6 +29,13 @@
       "when": 1794506113252,
       "tag": "0003_rich_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794562006651,
+      "tag": "0004_unknown_sabra",
+      "breakpoints": true
     }
   ]
 }

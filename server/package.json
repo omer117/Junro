@@ -7,7 +7,9 @@
     "test": "vitest run",
     "dev": "tsx watch --env-file=../.env src/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx --env-file=../.env src/db/migrate-cli.ts"
+    "db:migrate": "tsx --env-file=../.env src/db/migrate-cli.ts",
+    "db:seed:airports": "tsx --env-file=../.env src/airports/seed-cli.ts",
+    "airports:build": "tsx scripts/build-airports.ts"
   },
   "dependencies": {
     "connect-pg-simple": "^10.0.0",

@@ -167,3 +167,25 @@ export const apiUsage = pgTable(
   },
   (t) => [primaryKey({ columns: [t.api, t.month] })],
 );
+
+/**
+ * About 300 of the world's biggest and busiest airports, at least one per country. Reference
+ * data: it is loaded by `npm run db:seed:airports` from server/data/airports.json and is the same
+ * for everyone. The IATA code ("TLV") is the key.
+ */
+export const airports = pgTable(
+  'airports',
+  {
+    iataCode: text('iata_code').primaryKey(),
+    icaoCode: text('icao_code'),
+    name: text('name').notNull(),
+    city: text('city').notNull(),
+    countryCode: text('country_code').notNull(),
+    countryName: text('country_name').notNull(),
+    lat: doublePrecision('lat').notNull(),
+    lng: doublePrecision('lng').notNull(),
+    /** 1 = the biggest and busiest of the list. */
+    rank: integer('rank').notNull(),
+  },
+  (t) => [index('airports_country_idx').on(t.countryCode), index('airports_rank_idx').on(t.rank)],
+);
