@@ -407,3 +407,10 @@
 .day-card:not(.day-card--empty) {
   box-shadow: 0 2px 14px rgb(30 27 58 / 7%);
 }
+
+.account__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 600;
+}

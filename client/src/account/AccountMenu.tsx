@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { useMe } from '../auth/useMe';
 import { useSignOut } from '../auth/useSignOut';
 
@@ -25,6 +26,9 @@ export function AccountMenu() {
         <div className="account__panel">
           <p className="account__name">{user.name}</p>
           <p className="account__email">{user.email}</p>
+          <Link to="/settings" className="account__link">
+            Settings
+          </Link>
           <button type="button" onClick={() => signOut.mutate()} disabled={signOut.isPending}>
             Sign out
           </button>

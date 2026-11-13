@@ -4,6 +4,7 @@ import { useMe } from './auth/useMe';
 import { DayScreen } from './day/DayScreen';
 import { NewDayPage } from './day/NewDayPage';
 import { Landing } from './landing/Landing';
+import { SettingsPage } from './settings/SettingsPage';
 import { TripsHome } from './trips/TripsHome';
 
 // Only in `npm run dev`: a page for looking at the map while building.
@@ -40,6 +41,7 @@ export function App() {
     <Routes>
       <Route path="/" element={me.data ? <TripsHome /> : <Landing />} />
       <Route path="/days/:dayId" element={me.data ? <DayScreen /> : <Landing />} />
+      <Route path="/settings" element={me.data ? <SettingsPage /> : <Landing />} />
       <Route path="/trips/:tripId/days/new" element={me.data ? <NewDayPage /> : <Landing />} />
       {MapDemo && (
         <Route
