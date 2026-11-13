@@ -40,7 +40,12 @@ describe('days API', () => {
     const res = await agent.post(`/trips/${trip.id}/days`).send(validDay);
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ id: expect.any(String), tripId: trip.id, ...validDay });
+    expect(res.body).toEqual({
+      id: expect.any(String),
+      tripId: trip.id,
+      ...validDay,
+      stageCount: 0,
+    });
   });
 
   it.each([

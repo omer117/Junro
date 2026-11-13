@@ -1,9 +1,9 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, count, eq, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { TRAVEL_MODES, days } from '../db/schema.js';
+import { TRAVEL_MODES, days, stages } from '../db/schema.js';
 import { validateBody } from '../validate.js';
 import { uuidParam } from './helpers.js';
 import { requireOwnedDay, requireOwnedTrip } from './ownership.js';
@@ -24,7 +24,7 @@ const dayPatch = dayBody.partial();
 type DayRow = typeof days.$inferSelect;
 
 /** The API shape of a day: points are grouped, the database columns are flat. */
-export function toDay(row: DayRow) {
+export function toDay(row: DayRow, stageCount: number) {
   return {
     id: row.id,
     tripId: row.tripId,
@@ -33,7 +33,13 @@ export function toDay(row: DayRow) {
     end: { lat: row.endLat, lng: row.endLng },
     startTime: row.startTime,
     travelMode: row.travelMode,
+    stageCount,
   };
+}
+
+async function countStages(db: Db, dayId: string): Promise<number> {
+  const [row] = await db.select({ total: count() }).from(stages).where(eq(stages.dayId, dayId));
+  return row!.total;
 }
 
 export function daysRouter(db: Db): Router {
@@ -43,11 +49,17 @@ export function daysRouter(db: Db): Router {
   router.get('/trips/:tripId/days', async (req, res) => {
     await requireOwnedTrip(db, req.user!.id, uuidParam(req.params.tripId));
     const rows = await db
-      .select()
+      .select({
+        day: days,
+        // One query for the whole list: how many stages each day has.
+        // Table names are written out: Drizzle leaves them off column references when the query
+        // has a single table, which would make this compare the wrong columns.
+        stageCount: sql<number>`(select count(*)::int from "stages" "s" where "s"."day_id" = "days"."id")`,
+      })
       .from(days)
       .where(eq(days.tripId, uuidParam(req.params.tripId)))
       .orderBy(asc(days.date), asc(days.startTime));
-    res.json(rows.map(toDay));
+    res.json(rows.map((r) => toDay(r.day, r.stageCount)));
   });
 
   router.post('/trips/:tripId/days', validateBody(dayBody), async (req, res) => {
@@ -66,11 +78,12 @@ export function daysRouter(db: Db): Router {
         travelMode: body.travelMode,
       })
       .returning();
-    res.status(201).json(toDay(row!));
+    res.status(201).json(toDay(row!, 0));
   });
 
   router.get('/days/:id', async (req, res) => {
-    res.json(toDay(await requireOwnedDay(db, req.user!.id, uuidParam(req.params.id))));
+    const day = await requireOwnedDay(db, req.user!.id, uuidParam(req.params.id));
+    res.json(toDay(day, await countStages(db, day.id)));
   });
 
   router.patch('/days/:id', validateBody(dayPatch), async (req, res) => {
@@ -84,11 +97,11 @@ export function daysRouter(db: Db): Router {
       ...(body.travelMode !== undefined && { travelMode: body.travelMode }),
     };
     if (Object.keys(changes).length === 0) {
-      res.json(toDay(day));
+      res.json(toDay(day, await countStages(db, day.id)));
       return;
     }
     const [row] = await db.update(days).set(changes).where(eq(days.id, day.id)).returning();
-    res.json(toDay(row!));
+    res.json(toDay(row!, await countStages(db, day.id)));
   });
 
   router.delete('/days/:id', async (req, res) => {
