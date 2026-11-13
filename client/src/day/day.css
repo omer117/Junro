@@ -498,3 +498,29 @@
   color: var(--ink-muted);
   font-size: var(--text-sm);
 }
+
+/*
+ * On a computer the plan is a panel on the left, full height, with the map beside it and the
+ * search floating over the map. On a phone it stays a sheet at the bottom.
+ */
+@media (min-width: 52rem) {
+  .day-sheet {
+    top: var(--space-4);
+    right: auto;
+    bottom: var(--space-4);
+    left: var(--space-4);
+    width: 26rem;
+    max-height: none;
+    border-radius: var(--radius-lg);
+    padding-top: var(--space-5);
+  }
+
+  .day-sheet__handle {
+    display: none;
+  }
+
+  .day-screen__top {
+    left: calc(26rem + var(--space-8));
+    max-width: 34rem;
+  }
+}

@@ -11,7 +11,7 @@ tells you which way to walk next.
 
 ## Status
 
-Beta in progress. The repository setup (M0), the solver (M1) and the server core (M2) are done.
+Beta in progress. The repository setup (M0), the solver (M1), the server core (M2) and the Google integration (M3) are done; the client (M4) is in progress.
 
 ## Tech stack
 
@@ -110,6 +110,22 @@ are counted per project, so keep them apart from the project that holds the sign
    above normal use and far below the free allowance, so a bug cannot burn the month in a day.
 
 5. Check the usage page of each API a few days after you start using Junro.
+
+## Running the client locally
+
+```bash
+npm run dev -w @junro/client        # http://localhost:5173 (needs the server running too)
+```
+
+The client talks to the server through `/api` (Vite forwards it to `http://localhost:3000`, so the
+browser sees one origin and the sign-in cookie just works). The map needs a browser key for the
+Maps JavaScript API, restricted to `http://localhost:5173/*` and to that one API:
+
+1. In Google Cloud, enable **Maps JavaScript API** and create a separate browser key.
+2. Put it in `client/.env.local` as `VITE_GOOGLE_MAPS_BROWSER_KEY=...` (see `client/.env.example`).
+3. Set a daily cap on map loads in the Maps Platform quotas page.
+
+`/dev/map` (development only) shows the map and its markers with sample points.
 
 ## Airports
 

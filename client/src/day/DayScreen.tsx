@@ -5,6 +5,7 @@ import { ApiError } from '../api/api';
 import { CATEGORIES, CATEGORY_LABELS, type Category } from '../categories';
 import { CategoryIcon } from '../icons/CategoryIcon';
 import { formatClock, formatDayTitle } from '../lib/dates';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { isSamePlace } from '../map/endpoints';
 import type { MapMarker } from '../map/engine';
 import { MapView } from '../map/MapView';
@@ -24,8 +25,15 @@ import {
 import type { Stage } from './types';
 import './day.css';
 
-/** Room kept clear on the map for the sheet at the bottom and the search on top (pixels). */
-const MAP_PADDING = { top: 110, right: 32, bottom: 400, left: 32 };
+/** The width from which the plan is a side panel next to the map instead of a sheet at the bottom. */
+const WIDE_SCREEN = '(min-width: 52rem)';
+
+/**
+ * Room kept clear on the map (pixels): on a phone the sheet covers the bottom and the search the
+ * top; on a computer the panel covers the left (26rem plus its margins) and the search the top.
+ */
+const PHONE_PADDING = { top: 110, right: 32, bottom: 400, left: 32 };
+const COMPUTER_PADDING = { top: 110, right: 48, bottom: 48, left: 480 };
 
 /** How long the route line takes to draw itself, plus a little. */
 const ANIMATION_MS = 2000;
@@ -78,6 +86,7 @@ export function DayScreen() {
   const [pending, setPending] = useState<Place | null>(null);
   const [editing, setEditing] = useState(false);
   const [animate, setAnimate] = useState(false);
+  const wide = useMediaQuery(WIDE_SCREEN);
 
   // The line draws itself once, right after "Find my route", and not again when the day is reopened.
   useEffect(() => {
@@ -171,12 +180,12 @@ export function DayScreen() {
   const partlyRouted = placed > 0 && added > 0;
 
   return (
-    <div className="day-screen">
+    <div className="day-screen" data-layout={wide ? 'wide' : 'narrow'}>
       <MapView
         markers={markers}
         routeLine={savedRoute?.routeLine ?? null}
         animateRoute={animate}
-        padding={MAP_PADDING}
+        padding={wide ? COMPUTER_PADDING : PHONE_PADDING}
       />
 
       <div className="day-screen__top">
