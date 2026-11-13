@@ -464,3 +464,37 @@
   flex: none;
   margin-top: 0.15rem;
 }
+
+/* Choosing how to fit new stops into a day that already has a route */
+.edit-choice {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--ground);
+  border-radius: var(--radius-md);
+}
+
+.edit-choice h2 {
+  font-size: var(--text-lg);
+}
+
+.edit-choice p {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.edit-choice__option {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  text-align: left;
+}
+
+.edit-choice__option span {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}

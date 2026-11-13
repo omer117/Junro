@@ -146,8 +146,8 @@ export function DayScreen() {
     addStage.mutate({ placeId: pending.id, category }, { onSuccess: () => setPending(null) });
   };
 
-  const findRoute = () =>
-    solve.mutate('full', {
+  const findRoute = (mode: 'full' | 'minimal') =>
+    solve.mutate(mode, {
       onSuccess: () => {
         setEditing(false);
         setAnimate(true);
@@ -163,6 +163,12 @@ export function DayScreen() {
   const problem = addProblem ?? (solve.isError ? solveProblem(solve.error) : null);
 
   const showSummary = savedRoute !== null && !editing;
+
+  // Some stops have their place in a route and some do not: stops were added to a day that
+  // already had a route. The person chooses how to fit them in.
+  const placed = stages.filter((stage) => stage.position !== null).length;
+  const added = stages.length - placed;
+  const partlyRouted = placed > 0 && added > 0;
 
   return (
     <div className="day-screen">
@@ -240,6 +246,16 @@ export function DayScreen() {
               }}
               stopNames={stopNames}
             />
+            {savedRoute.routeLine === null && !savedRoute.routeLineError && (
+              <button
+                type="button"
+                className="button button--outline"
+                disabled={solve.isPending}
+                onClick={() => findRoute('minimal')}
+              >
+                Redraw the line
+              </button>
+            )}
             <button
               type="button"
               className="button button--outline"
@@ -313,21 +329,55 @@ export function DayScreen() {
               </ul>
             )}
 
-            <button
-              type="button"
-              className="button button--accent button--wide"
-              disabled={stages.length === 0 || solve.isPending}
-              aria-busy={solve.isPending}
-              onClick={findRoute}
-            >
-              <RouteIcon size={20} aria-hidden="true" />
-              {solve.isPending
-                ? 'Finding your route…'
-                : savedRoute
-                  ? 'Recalculate route'
-                  : 'Find my route'}
-            </button>
-            {stages.length === 0 && <p className="day-sheet__hint">Add a stop to find a route.</p>}
+            {partlyRouted ? (
+              <section className="edit-choice" aria-labelledby="update-heading">
+                <h2 id="update-heading">Update your route</h2>
+                <p>
+                  You added {added} {added === 1 ? 'stop' : 'stops'} to a day that already has a
+                  route. How should {added === 1 ? 'it' : 'they'} fit in?
+                </p>
+                <button
+                  type="button"
+                  className="edit-choice__option"
+                  disabled={solve.isPending}
+                  onClick={() => findRoute('minimal')}
+                >
+                  <strong>Keep my order</strong>
+                  <span>
+                    New stops go where they add the least time. Everything else stays put.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="edit-choice__option"
+                  disabled={solve.isPending}
+                  onClick={() => findRoute('full')}
+                >
+                  <strong>Recalculate everything</strong>
+                  <span>Junro finds the fastest order again, and may reorder your day.</span>
+                </button>
+              </section>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="button button--accent button--wide"
+                  disabled={stages.length === 0 || solve.isPending}
+                  aria-busy={solve.isPending}
+                  onClick={() => findRoute('full')}
+                >
+                  <RouteIcon size={20} aria-hidden="true" />
+                  {solve.isPending
+                    ? 'Finding your route…'
+                    : savedRoute
+                      ? 'Recalculate route'
+                      : 'Find my route'}
+                </button>
+                {stages.length === 0 && (
+                  <p className="day-sheet__hint">Add a stop to find a route.</p>
+                )}
+              </>
+            )}
             {savedRoute && (
               <button
                 type="button"
