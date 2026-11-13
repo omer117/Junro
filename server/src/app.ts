@@ -41,6 +41,10 @@ export interface AppDeps {
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  // In production a proxy (Vercel) sits in front and talks plain http to this server. Trusting
+  // its X-Forwarded-Proto header lets express-session see that the browser used https, which
+  // it requires before it will send a Secure cookie.
+  if (deps.secureCookies) app.set('trust proxy', 1);
   app.use(express.json());
 
   app.use(
