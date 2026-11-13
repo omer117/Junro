@@ -11,7 +11,7 @@ tells you which way to walk next.
 
 ## Status
 
-Beta in progress. The repository setup (M0), the solver (M1) and the server core (M2) are done.
+Beta in progress. The repository setup (M0), the solver (M1), the server core (M2) and the Google integration (M3) are done; the client (M4) is in progress.
 
 ## Tech stack
 
@@ -110,6 +110,61 @@ are counted per project, so keep them apart from the project that holds the sign
    above normal use and far below the free allowance, so a bug cannot burn the month in a day.
 
 5. Check the usage page of each API a few days after you start using Junro.
+
+## Running the client locally
+
+```bash
+npm run dev -w @junro/client        # http://localhost:5173 (needs the server running too)
+```
+
+The client talks to the server through `/api` (Vite forwards it to `http://localhost:3000`, so the
+browser sees one origin and the sign-in cookie just works). The map needs a browser key for the
+Maps JavaScript API, restricted to `http://localhost:5173/*` and to that one API:
+
+1. In Google Cloud, enable **Maps JavaScript API** and create a separate browser key.
+2. Put it in `client/.env.local` as `VITE_GOOGLE_MAPS_BROWSER_KEY=...` (see `client/.env.example`).
+3. Set a daily cap on map loads in the Maps Platform quotas page.
+
+`/dev/map` (development only) shows the map and its markers with sample points.
+
+## Looking at the database
+
+Two ways to browse the tables, with the local database from `docker compose` running:
+
+- **Drizzle Studio** (made for this project's schema): `npm run db:studio -w @junro/server`, then
+  open https://local.drizzle.studio. Browse, filter and edit rows, and follow the links between
+  tables.
+- **Adminer** (a plain web page): `docker compose --profile tools up -d adminer`, then open
+  http://localhost:8081. Choose "PostgreSQL", server `postgres`, user `junro`, password `junro`,
+  database `junro` (or `junro_test` for the test database).
+
+From a desktop tool (DBeaver, pgAdmin, the VS Code PostgreSQL extension) connect to
+`localhost`, port `5434`, user `junro`, password `junro`.
+
+## Airports
+
+The `airports` table holds about 300 of the world's biggest and busiest airports, at least one
+for every country that has a passenger airport (236 countries). It is reference data, loaded
+from `server/data/airports.json`:
+
+```bash
+npm run db:seed:airports -w @junro/server   # safe to run again
+npm run airports:build -w @junro/server     # rebuild the list from the sources (needs internet)
+```
+
+How the list is chosen: every country gets its best airport, then the remaining places go to
+the best airports anywhere. "Best" means size class first (large, then medium, then small), then
+the number of flight routes that touch the airport. Countries with no passenger airport at all
+(Monaco, Vatican City, Liechtenstein, San Marino, Andorra and a few uninhabited territories) are
+not in the list. A country whose airports have no scheduled flights at the moment, for example
+because of war, still gets its biggest coded airport.
+
+Sources and credits:
+
+- [OurAirports](https://ourairports.com/data/), public domain: airports and countries.
+- [OpenFlights](https://openflights.org/data), Open Database License: the routes file, used only
+  to count routes per airport. It dates from 2014, so airports opened since then look quieter than
+  they are, and the order inside the list is approximate.
 
 ## License
 

@@ -1,0 +1,67 @@
+/*
+ * Design tokens, "Golden hour".
+ * Colours marked "canvas" come straight from the design canvas; the rest support them.
+ * tokens.test.ts checks that every text/background pair reaches a 4.5:1 contrast ratio.
+ */
+:root {
+  /* The design is light only. This also tells browsers and extensions not to darken it. */
+  color-scheme: light;
+
+  /* Colour: canvas */
+  --ink: #1e1b3a;
+  --ground: #eef1f6;
+  --sky-warm: #fbe9d7;
+  --sky-top: #dce8f6;
+  --accent: #f59a4a;
+  --warning: #c2410c;
+  --warning-text: #b23a0a;
+
+  /* Colour: supporting */
+  --surface: #ffffff;
+  --ink-muted: #55526f;
+  --on-ink: #ffffff;
+  --on-warning: #ffffff;
+  --line: #d6dbe6;
+  --focus: #1e1b3a;
+
+  /* Colour: map (also used by the map style) */
+  --map-land: #e4e8f0;
+  --map-road: #ffffff;
+  --map-park: #cfe5d4;
+  --map-water: #bfd5e8;
+
+  /* Type */
+  --font-heading: 'Bricolage Grotesque Variable', 'Figtree Variable', system-ui, sans-serif;
+  --font-body: 'Figtree Variable', system-ui, sans-serif;
+  --font-jp: 'Noto Sans JP', 'Figtree Variable', system-ui, sans-serif;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-display: clamp(2.5rem, 6vw, 4.5rem);
+
+  /* Space (4px steps) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Shape */
+  --radius-sm: 0.75rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.75rem;
+  --radius-pill: 999px;
+  --shadow-float: 0 6px 24px rgb(30 27 58 / 14%);
+
+  /* Accessibility: every touch target is at least this big */
+  --tap: 44px;
+}

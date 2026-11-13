@@ -190,4 +190,35 @@ describe('stages API', () => {
 
     expect((await ann.agent.get(`/stages/${stage.id}`)).body.done).toBe(false);
   });
+
+  it('shows how many stages a day has, in the day and in the list of days', async () => {
+    const { agent, day } = await userWithDay();
+    const tripId = day.tripId as string;
+    const a = await newPlace('p-a', 'A');
+    const b = await newPlace('p-b', 'B');
+    expect(day.stageCount).toBe(0);
+
+    await agent.post(`/days/${day.id}/stages`).send({ placeId: a.id, category: 'park' });
+    const { body: second } = await agent
+      .post(`/days/${day.id}/stages`)
+      .send({ placeId: b.id, category: 'cafe' });
+
+    expect((await agent.get(`/days/${day.id}`)).body.stageCount).toBe(2);
+    expect((await agent.get(`/trips/${tripId}/days`)).body[0].stageCount).toBe(2);
+
+    await agent.delete(`/stages/${second.id}`).expect(204);
+
+    expect((await agent.get(`/days/${day.id}`)).body.stageCount).toBe(1);
+  });
+
+  it("counts only the day's own stages", async () => {
+    const one = await userWithDay('Ann');
+    const two = await userWithDay('Bob');
+    const place = await newPlace();
+    await one.agent
+      .post(`/days/${one.day.id}/stages`)
+      .send({ placeId: place.id, category: 'park' });
+
+    expect((await two.agent.get(`/days/${two.day.id}`)).body.stageCount).toBe(0);
+  });
 });

@@ -15,6 +15,12 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+/** A stored route line, oldest first in a day's list (a jsonb object would not keep its order). */
+export interface RouteLine {
+  fingerprint: string;
+  line: string;
+}
+
 /** The fixed list of stage categories (hardcoded on purpose, see the spec). */
 export const CATEGORIES = [
   'restaurant',
@@ -79,6 +85,13 @@ export const trips = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    /** Where the trip starts and ends, as airports from the airports list. Optional. */
+    originAirport: text('origin_airport').references(() => airports.iataCode, {
+      onDelete: 'set null',
+    }),
+    destinationAirport: text('destination_airport').references(() => airports.iataCode, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
   },
   (t) => [index('trips_user_idx').on(t.userId)],
@@ -96,13 +109,17 @@ export const days = pgTable(
     startLng: doublePrecision('start_lng').notNull(),
     endLat: doublePrecision('end_lat').notNull(),
     endLng: doublePrecision('end_lng').notNull(),
+    /** What to call the two ends of the day, for example "Hotel". Optional. */
+    startName: text('start_name'),
+    endName: text('end_name'),
     /** Minutes since midnight, same unit as the solver. */
     startTime: integer('start_time').notNull(),
     travelMode: travelModeEnum('travel_mode').notNull(),
-    /** The route line for the map, kept so the same route is never bought twice. */
-    polyline: text('polyline'),
-    /** What the polyline was made for (mode + stops in order); a different key means a new line. */
-    polylineKey: text('polyline_key'),
+    /**
+     * Route lines for the map, one per route (a fingerprint of the mode and the stops in order),
+     * so the same route is never bought twice and going back to an earlier one is free.
+     */
+    routeLines: jsonb('route_lines').$type<RouteLine[]>().notNull().default([]),
   },
   (t) => [index('days_trip_idx').on(t.tripId)],
 );
@@ -166,4 +183,26 @@ export const apiUsage = pgTable(
     used: integer('used').notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.api, t.month] })],
+);
+
+/**
+ * About 300 of the world's biggest and busiest airports, at least one per country. Reference
+ * data: it is loaded by `npm run db:seed:airports` from server/data/airports.json and is the same
+ * for everyone. The IATA code ("TLV") is the key.
+ */
+export const airports = pgTable(
+  'airports',
+  {
+    iataCode: text('iata_code').primaryKey(),
+    icaoCode: text('icao_code'),
+    name: text('name').notNull(),
+    city: text('city').notNull(),
+    countryCode: text('country_code').notNull(),
+    countryName: text('country_name').notNull(),
+    lat: doublePrecision('lat').notNull(),
+    lng: doublePrecision('lng').notNull(),
+    /** 1 = the biggest and busiest of the list. */
+    rank: integer('rank').notNull(),
+  },
+  (t) => [index('airports_country_idx').on(t.countryCode), index('airports_rank_idx').on(t.rank)],
 );

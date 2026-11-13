@@ -29,6 +29,34 @@
       "when": 1794506113252,
       "tag": "0003_rich_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794562006651,
+      "tag": "0004_unknown_sabra",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794562248476,
+      "tag": "0005_robust_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794562697646,
+      "tag": "0006_glorious_scream",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794570132528,
+      "tag": "0007_route_lines",
+      "breakpoints": true
     }
   ]
 }

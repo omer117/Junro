@@ -98,6 +98,11 @@ export async function loadTravelTimes(args: {
     await save(db, dayId, mode, seconds, storedPoints, neededKeys);
   }
 
+  return lookup(seconds);
+}
+
+/** A travel-time function that reads from the pairs we hold. Unknown pairs are Infinity, never a guess. */
+function lookup(seconds: Map<string, number>): TravelTimeFn {
   return (from, to) => {
     const a = pointKey(from);
     const b = pointKey(to);
@@ -105,6 +110,30 @@ export async function loadTravelTimes(args: {
     const value = seconds.get(`${a}|${b}`);
     return value === undefined ? Infinity : value / 60;
   };
+}
+
+/**
+ * The same travel times as loadTravelTimes, but from the cache only: it never calls Google.
+ * Returns null when any pair is missing (a stop was added, the travel mode changed...), meaning
+ * "this needs a fresh solve".
+ */
+export async function readCachedTravelTimes(args: {
+  db: Db;
+  dayId: string;
+  mode: TravelMode;
+  points: LatLng[];
+}): Promise<TravelTimeFn | null> {
+  const keys = [...new Set(args.points.map(pointKey))];
+  if (keys.length < 2) return () => 0;
+
+  const seconds = new Map<string, number>();
+  await load(args.db, args.dayId, args.mode, seconds);
+  for (const from of keys) {
+    for (const to of keys) {
+      if (from !== to && !seconds.has(`${from}|${to}`)) return null;
+    }
+  }
+  return lookup(seconds);
 }
 
 async function load(

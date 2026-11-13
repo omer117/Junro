@@ -121,4 +121,6 @@ two minutes.
 
 Public transit, automatic stage dropping by priority, more sign-in providers, arrival
 auto-detection, per-country palettes, several opening windows per stage per day (places
-that close for a lunch break; beta uses one window, earliest opening to latest closing).
+that close for a lunch break; beta uses one window, earliest opening to latest closing),
+modern map markers and cloud-based map styling with a Map ID (beta uses a JSON style and SVG
+markers).

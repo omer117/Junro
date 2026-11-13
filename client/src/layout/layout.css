@@ -1,0 +1,31 @@
+/* A page: the picture behind, a card of content above it. */
+.page {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  min-height: 100dvh;
+  padding: var(--space-5) var(--space-4) var(--space-12);
+}
+
+.page-card {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  width: min(100%, 40rem);
+  padding: var(--space-6) var(--space-5);
+  background: rgb(255 255 255 / 76%);
+  border: 1px solid rgb(255 255 255 / 90%);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 44px rgb(30 27 58 / 14%);
+  backdrop-filter: blur(10px);
+}
+
+@media (min-width: 40rem) {
+  .page {
+    padding-top: var(--space-8);
+  }
+
+  .page-card {
+    padding: var(--space-8);
+  }
+}
