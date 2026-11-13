@@ -10,16 +10,24 @@ import { requireOwnedDay, requireOwnedTrip } from './ownership.js';
 
 const point = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
 
+const pointName = z.string().trim().min(1).max(100);
+
 const dayBody = z.object({
   date: z.iso.date(),
   start: point,
   end: point,
+  startName: pointName.optional(),
+  endName: pointName.optional(),
   /** Minutes since midnight. */
   startTime: z.number().int().min(0).max(1439),
   travelMode: z.enum(TRAVEL_MODES),
 });
 
-const dayPatch = dayBody.partial();
+/** A change can also clear a name (null). */
+const dayPatch = dayBody
+  .omit({ startName: true, endName: true })
+  .partial()
+  .extend({ startName: pointName.nullable().optional(), endName: pointName.nullable().optional() });
 
 type DayRow = typeof days.$inferSelect;
 
@@ -31,6 +39,8 @@ export function toDay(row: DayRow, stageCount: number) {
     date: row.date,
     start: { lat: row.startLat, lng: row.startLng },
     end: { lat: row.endLat, lng: row.endLng },
+    startName: row.startName,
+    endName: row.endName,
     startTime: row.startTime,
     travelMode: row.travelMode,
     stageCount,
@@ -74,6 +84,8 @@ export function daysRouter(db: Db): Router {
         startLng: body.start.lng,
         endLat: body.end.lat,
         endLng: body.end.lng,
+        startName: body.startName ?? null,
+        endName: body.endName ?? null,
         startTime: body.startTime,
         travelMode: body.travelMode,
       })
@@ -93,6 +105,8 @@ export function daysRouter(db: Db): Router {
       ...(body.date !== undefined && { date: body.date }),
       ...(body.start && { startLat: body.start.lat, startLng: body.start.lng }),
       ...(body.end && { endLat: body.end.lat, endLng: body.end.lng }),
+      ...(body.startName !== undefined && { startName: body.startName }),
+      ...(body.endName !== undefined && { endName: body.endName }),
       ...(body.startTime !== undefined && { startTime: body.startTime }),
       ...(body.travelMode !== undefined && { travelMode: body.travelMode }),
     };

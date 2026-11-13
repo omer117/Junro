@@ -103,6 +103,9 @@ export const days = pgTable(
     startLng: doublePrecision('start_lng').notNull(),
     endLat: doublePrecision('end_lat').notNull(),
     endLng: doublePrecision('end_lng').notNull(),
+    /** What to call the two ends of the day, for example "Hotel". Optional. */
+    startName: text('start_name'),
+    endName: text('end_name'),
     /** Minutes since midnight, same unit as the solver. */
     startTime: integer('start_time').notNull(),
     travelMode: travelModeEnum('travel_mode').notNull(),

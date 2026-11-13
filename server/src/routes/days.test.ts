@@ -44,6 +44,8 @@ describe('days API', () => {
       id: expect.any(String),
       tripId: trip.id,
       ...validDay,
+      startName: null,
+      endName: null,
       stageCount: 0,
     });
   });
@@ -138,4 +140,42 @@ describe('days API', () => {
     await agent.get('/days/nope').expect(404);
     await agent.get('/trips/nope/days').expect(404);
   });
+});
+
+describe('names for the two ends of a day', () => {
+  it('has no names until they are given, and says so', async () => {
+    const { agent, trip } = await userWithTrip();
+
+    const res = await agent.post(`/trips/${trip.id}/days`).send(validDay);
+
+    expect(res.body.startName).toBeNull();
+    expect(res.body.endName).toBeNull();
+  });
+
+  it('keeps the names given when the day is created, and lets them change', async () => {
+    const { agent, trip } = await userWithTrip();
+    const { body: day } = await agent
+      .post(`/trips/${trip.id}/days`)
+      .send({ ...validDay, startName: 'Hotel Gracery', endName: 'Hotel Gracery' });
+
+    expect(day).toMatchObject({ startName: 'Hotel Gracery', endName: 'Hotel Gracery' });
+
+    const changed = await agent.patch(`/days/${day.id}`).send({ endName: 'Ueno station' });
+    expect(changed.body).toMatchObject({ startName: 'Hotel Gracery', endName: 'Ueno station' });
+
+    const cleared = await agent.patch(`/days/${day.id}`).send({ startName: null });
+    expect(cleared.body.startName).toBeNull();
+    expect(cleared.body.endName).toBe('Ueno station');
+  });
+
+  it.each([{ startName: '' }, { startName: '   ' }, { endName: 'x'.repeat(101) }, { endName: 5 }])(
+    'refuses the name %j',
+    async (names) => {
+      const { agent, trip } = await userWithTrip();
+
+      const res = await agent.post(`/trips/${trip.id}/days`).send({ ...validDay, ...names });
+
+      expect(res.status).toBe(400);
+    },
+  );
 });
