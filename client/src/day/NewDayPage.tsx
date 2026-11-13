@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { PageShell } from '../layout/PageShell';
 import type { Place } from '../places/api';
 import { PlaceSearch } from '../places/PlaceSearch';
 import type { TravelMode } from '../trips/types';
@@ -86,7 +87,7 @@ export function NewDayPage() {
   };
 
   return (
-    <main className="new-day">
+    <PageShell className="new-day">
       <Link to="/" className="new-day__back">
         Back to your trips
       </Link>
@@ -150,6 +151,6 @@ export function NewDayPage() {
           Create day
         </button>
       </form>
-    </main>
+    </PageShell>
   );
 }

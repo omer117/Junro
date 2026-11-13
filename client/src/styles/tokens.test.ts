@@ -27,6 +27,8 @@ describe('design tokens', () => {
   // Text must reach 4.5:1 against what it sits on (WCAG AA, normal size text).
   it.each([
     ['ink', 'ground'],
+    ['ink', 'sky-top'],
+    ['ink-muted', 'sky-top'],
     ['ink', 'sky-warm'],
     ['ink-muted', 'sky-warm'],
     ['warning-text', 'sky-warm'],

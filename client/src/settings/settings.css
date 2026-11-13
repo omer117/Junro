@@ -1,10 +1,5 @@
 .settings {
-  display: grid;
   gap: var(--space-4);
-  align-content: start;
-  max-width: 40rem;
-  margin: 0 auto;
-  padding: var(--space-5) var(--space-5) var(--space-12);
 }
 
 .settings__back {
@@ -34,7 +29,7 @@
   margin: 0;
   padding: var(--space-4);
   background: var(--surface);
-  border: 0;
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
 }
 

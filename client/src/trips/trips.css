@@ -1,8 +1,4 @@
 .trips-home {
-  max-width: 40rem;
-  margin: 0 auto;
-  padding: var(--space-5) var(--space-5) var(--space-12);
-  display: grid;
   gap: var(--space-6);
 }
 
@@ -402,10 +398,11 @@
   height: 100%;
 }
 
-/* Cards float a little above the picture */
+/* Cards inside the page card: solid, with an edge, so they stand out from it */
 .trips-home__empty,
 .day-card:not(.day-card--empty) {
-  box-shadow: 0 2px 14px rgb(30 27 58 / 7%);
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 10px rgb(30 27 58 / 6%);
 }
 
 .account__link {

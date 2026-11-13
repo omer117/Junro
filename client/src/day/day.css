@@ -256,7 +256,10 @@
 }
 
 /* Adding a day */
-.new-day,
+.new-day {
+  gap: var(--space-4);
+}
+
 .day-error {
   display: grid;
   gap: var(--space-4);

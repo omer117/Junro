@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { CATEGORY_LABELS } from '../categories';
 import { CategoryIcon } from '../icons/CategoryIcon';
+import { PageShell } from '../layout/PageShell';
 import {
   useResetStayDuration,
   useSaveStayDuration,
@@ -93,7 +94,7 @@ export function SettingsPage() {
   const durations = useStayDurations();
 
   return (
-    <main className="settings">
+    <PageShell className="settings">
       <Link to="/" className="settings__back">
         Back to your trips
       </Link>
@@ -119,6 +120,6 @@ export function SettingsPage() {
           ))}
         </div>
       )}
-    </main>
+    </PageShell>
   );
 }

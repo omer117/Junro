@@ -4,10 +4,14 @@
  * tokens.test.ts checks that every text/background pair reaches a 4.5:1 contrast ratio.
  */
 :root {
+  /* The design is light only. This also tells browsers and extensions not to darken it. */
+  color-scheme: light;
+
   /* Colour: canvas */
   --ink: #1e1b3a;
   --ground: #eef1f6;
   --sky-warm: #fbe9d7;
+  --sky-top: #dce8f6;
   --accent: #f59a4a;
   --warning: #c2410c;
   --warning-text: #b23a0a;
