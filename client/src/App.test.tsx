@@ -41,12 +41,19 @@ describe('App', () => {
   it('shows the trips screen for a signed-in user', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => json(200, { id: 'u1', email: 'a@x.com', name: 'Ann Lee' })),
+      vi.fn(async (url: string) =>
+        url === '/api/trips'
+          ? json(200, [])
+          : json(200, { id: 'u1', email: 'a@x.com', name: 'Ann Lee' }),
+      ),
     );
 
     renderApp();
 
     expect(await screen.findByRole('heading', { name: /your trips/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /plan your first trip/i }),
+    ).toBeInTheDocument();
   });
 
   it('says so, and offers a retry, when the server cannot be reached', async () => {

@@ -29,12 +29,14 @@ describe('signing out', () => {
       vi.fn(async (url: string, init?: RequestInit) => {
         calls.push(`${init?.method ?? 'GET'} ${url}`);
         if (url === '/api/auth/logout') return new Response(null, { status: 204 });
+        if (url === '/api/trips') return json(200, []);
         return json(200, { id: 'u1', email: 'a@x.com', name: 'Ann Lee' });
       }),
     );
     renderApp();
 
-    await userEvent.click(await screen.findByRole('button', { name: /sign out/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /account/i }));
+    await userEvent.click(screen.getByRole('button', { name: /sign out/i }));
 
     expect(
       await screen.findByRole('heading', { name: /your trip, in the right order/i }),
@@ -48,12 +50,15 @@ describe('signing out', () => {
       vi.fn(async (url: string) =>
         url === '/api/auth/logout'
           ? json(500, { error: { code: 'internal', message: 'Something went wrong' } })
-          : json(200, { id: 'u1', email: 'a@x.com', name: 'Ann Lee' }),
+          : url === '/api/trips'
+            ? json(200, [])
+            : json(200, { id: 'u1', email: 'a@x.com', name: 'Ann Lee' }),
       ),
     );
     renderApp();
 
-    await userEvent.click(await screen.findByRole('button', { name: /sign out/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /account/i }));
+    await userEvent.click(screen.getByRole('button', { name: /sign out/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not sign you out/i);
     expect(screen.getByRole('heading', { name: /your trips/i })).toBeInTheDocument();
