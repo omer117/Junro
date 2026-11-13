@@ -26,7 +26,7 @@
 }
 
 .trips-home__switch select,
-.new-trip input {
+.trip-form input {
   min-height: var(--tap);
   padding: 0 var(--space-4);
   border: 2px solid var(--line);
@@ -77,16 +77,16 @@
   color: var(--ink-muted);
 }
 
-.new-trip {
+.trip-form {
   display: grid;
   gap: var(--space-2);
 }
 
-.new-trip label {
+.trip-form label {
   font-weight: 600;
 }
 
-.new-trip [role='alert'] {
+.trip-form [role='alert'] {
   margin: 0;
   color: var(--warning-text);
   font-weight: 600;
@@ -270,4 +270,120 @@
 .account__email {
   color: var(--ink-muted);
   font-size: var(--text-sm);
+}
+
+.trip-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* The route on the boarding pass: two codes and a plane between them. */
+.boarding-pass__route {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.boarding-pass__route div {
+  display: grid;
+}
+
+.boarding-pass__route div:last-child {
+  text-align: right;
+}
+
+.boarding-pass__route strong {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.boarding-pass__route span {
+  font-size: var(--text-sm);
+  opacity: 0.9;
+}
+
+.boarding-pass__plane {
+  flex: 1;
+  min-width: 1.5rem;
+  max-width: 3rem;
+  color: var(--accent);
+}
+
+/* Choosing an airport */
+.airport-picker {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.airport-picker label,
+.airport-picker__label {
+  font-weight: 600;
+}
+
+.airport-picker input {
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.airport-picker p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.airport-picker__results {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.airport-picker__results button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  text-align: left;
+}
+
+.airport-picker__results small {
+  grid-column: 2;
+  color: var(--ink-muted);
+}
+
+.airport-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.airport-chip__remove {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
 }

@@ -1,12 +1,13 @@
+import { Plane } from 'lucide-react';
 import { daysUntil, formatDayTitle } from '../lib/dates';
 import type { Day, Trip } from './types';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
- * The trip as a boarding pass. It shows only what is known: the name, the first planned day,
- * the number of planned days and the countdown to the first day. There are no airports or
- * flight times, because Junro does not hold that data.
+ * The trip as a boarding pass. It shows only what is known: the name, the two airports when the
+ * person has chosen them, the first planned day, the number of planned days and the countdown to
+ * the first day. There are no flight times, because Junro does not hold that data.
  */
 export function BoardingPass({ trip, days, today }: { trip: Trip; days: Day[]; today: string }) {
   const first = days.map((d) => d.date).sort()[0];
@@ -34,6 +35,23 @@ export function BoardingPass({ trip, days, today }: { trip: Trip; days: Day[]; t
         </span>
       </div>
       <h2 className="boarding-pass__name">{trip.name}</h2>
+      {trip.origin && trip.destination && (
+        <div
+          className="boarding-pass__route"
+          role="img"
+          aria-label={`From ${trip.origin.city} to ${trip.destination.city}`}
+        >
+          <div>
+            <strong>{trip.origin.iata}</strong>
+            <span>{trip.origin.city}</span>
+          </div>
+          <Plane className="boarding-pass__plane" size={24} aria-hidden="true" />
+          <div>
+            <strong>{trip.destination.iata}</strong>
+            <span>{trip.destination.city}</span>
+          </div>
+        </div>
+      )}
       <div className="boarding-pass__rule" aria-hidden="true" />
       <div className="boarding-pass__bottom">
         {first !== undefined && (

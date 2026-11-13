@@ -15,10 +15,33 @@ export function useTripDays(tripId: string | undefined) {
   });
 }
 
+/** What can be sent when creating a trip. */
+export interface TripInput {
+  name: string;
+  originAirport?: string;
+  destinationAirport?: string;
+}
+
 export function useCreateTrip() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => api<Trip>('/trips', { method: 'POST', body: { name } }),
+    mutationFn: (input: TripInput) => api<Trip>('/trips', { method: 'POST', body: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trips'] }),
+  });
+}
+
+/** What can be sent when changing a trip; null removes an airport. */
+export interface TripChange {
+  name?: string;
+  originAirport?: string | null;
+  destinationAirport?: string | null;
+}
+
+export function useUpdateTrip(tripId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (change: TripChange) =>
+      api<Trip>(`/trips/${tripId}`, { method: 'PATCH', body: change }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trips'] }),
   });
 }

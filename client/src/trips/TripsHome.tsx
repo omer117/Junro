@@ -5,7 +5,7 @@ import { todayString } from '../lib/dates';
 import { useTripDays, useTrips } from './api';
 import { BoardingPass } from './BoardingPass';
 import { DayCard } from './DayCard';
-import { NewTripForm } from './NewTripForm';
+import { TripForm } from './TripForm';
 import './trips.css';
 
 /** The signed-in home: the chosen trip as a boarding pass, with its days below. */
@@ -13,6 +13,7 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
   const trips = useTrips();
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const list = trips.data ?? [];
   const selected = list.find((trip) => trip.id === chosenId) ?? list[0];
@@ -40,7 +41,7 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
         <section className="trips-home__empty">
           <h2>Plan your first trip</h2>
           <p>Give it a name, then add the days and the places you want to see.</p>
-          <NewTripForm onCreated={(trip) => setChosenId(trip.id)} />
+          <TripForm onDone={(trip) => setChosenId(trip.id)} />
         </section>
       )}
 
@@ -64,6 +65,23 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
           )}
 
           <BoardingPass trip={selected} days={days.data ?? []} today={today} />
+
+          {editing ? (
+            <TripForm
+              key={selected.id}
+              trip={selected}
+              onDone={() => setEditing(false)}
+              onCancel={() => setEditing(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              className="button button--outline"
+              onClick={() => setEditing(true)}
+            >
+              Edit trip
+            </button>
+          )}
 
           <section className="trips-home__days" aria-labelledby="days-heading">
             <div className="trips-home__days-head">
@@ -95,11 +113,12 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
 
           <section className="trips-home__new">
             {adding ? (
-              <NewTripForm
-                onCreated={(trip) => {
+              <TripForm
+                onDone={(trip) => {
                   setChosenId(trip.id);
                   setAdding(false);
                 }}
+                onCancel={() => setAdding(false)}
               />
             ) : (
               <button

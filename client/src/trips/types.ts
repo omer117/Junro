@@ -1,9 +1,14 @@
+import type { Airport } from '../airports/types';
+
 export type TravelMode = 'walking' | 'driving';
 
 export interface Trip {
   id: string;
   name: string;
   createdAt: string;
+  /** Where the trip starts and ends, when the person has said. */
+  origin?: Airport | null;
+  destination?: Airport | null;
 }
 
 export interface Day {
