@@ -13,6 +13,18 @@ export function createMarkerElement(marker: MapMarker): HTMLElement {
   element.setAttribute('role', 'img');
   element.classList.add('map-marker');
 
+  if (marker.kind === 'loop') {
+    element.classList.add('map-marker--loop');
+    const lines = [marker.label, marker.endLabel].filter((line): line is string => Boolean(line));
+    for (const line of lines) {
+      const row = document.createElement('span');
+      row.textContent = line;
+      element.append(row);
+    }
+    element.setAttribute('aria-label', lines.join(', '));
+    return element;
+  }
+
   if (marker.kind === 'start' || marker.kind === 'end') {
     element.classList.add(`map-marker--${marker.kind}`);
     element.textContent = marker.label ?? '';

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EngineMap, MapMarker, Padding } from './engine';
+import { mergeEndpoints } from './endpoints';
 import { MapEngineError, useMapEngineLoader } from './MapEngineContext';
 
 export interface MapViewProps {
@@ -60,7 +61,7 @@ export function MapView({
 
   useEffect(() => {
     if (!map) return;
-    map.setMarkers(markers);
+    map.setMarkers(mergeEndpoints(markers));
     map.setRoute(routeLine, { animate: animateRoute });
     map.fit(padding);
     // `padding` is compared by value so a new object with the same numbers does not refit.

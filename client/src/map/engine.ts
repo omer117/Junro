@@ -7,8 +7,11 @@ export type { LatLng };
 export interface MapMarker {
   id: string;
   position: LatLng;
-  /** 'stage' is a stop of the day; 'start' and 'end' are the day's two ends. */
-  kind: 'stage' | 'start' | 'end';
+  /**
+   * 'stage' is a stop of the day; 'start' and 'end' are the day's two ends; 'loop' is a start
+   * and an end on the same spot, drawn as one marker.
+   */
+  kind: 'stage' | 'start' | 'end' | 'loop';
   /** Stops: the place name. */
   name?: string;
   category?: Category;
@@ -18,6 +21,8 @@ export interface MapMarker {
   warning?: boolean;
   /** Start and end: the text on the pin, for example "Start · 9:00". */
   label?: string;
+  /** Loop: the text for the end, shown under `label`. */
+  endLabel?: string;
 }
 
 /** Room to leave around the content, in pixels, for the sheet or panel that covers the map. */

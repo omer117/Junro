@@ -73,7 +73,8 @@
 
 /* The two ends of the day: a dark label above a small square on the exact spot. */
 .map-marker--start,
-.map-marker--end {
+.map-marker--end,
+.map-marker--loop {
   transform: translate(-50%, calc(-100% - 8px));
   padding: var(--space-1) var(--space-3);
   background: var(--ink);
@@ -83,7 +84,8 @@
 }
 
 .map-marker--start::after,
-.map-marker--end::after {
+.map-marker--end::after,
+.map-marker--loop::after {
   content: '';
   position: absolute;
   top: calc(100% + 4px);
@@ -94,4 +96,15 @@
   border: 2px solid var(--surface);
   border-radius: 4px;
   transform: translateX(-50%);
+}
+
+/* Start and end on the same spot: two lines in one pin. */
+.map-marker--loop {
+  border-radius: var(--radius-sm);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.map-marker--loop span {
+  display: block;
 }
