@@ -17,5 +17,19 @@ services:
       timeout: 3s
       retries: 15
 
+  # Optional: a web page to browse the database. Start it with:
+  #   docker compose --profile tools up -d adminer      then open http://localhost:8081
+  adminer:
+    image: adminer:4
+    profiles: ['tools']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha
+    ports:
+      - '8081:8080'
+
 volumes:
   junro-pgdata:

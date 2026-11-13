@@ -127,6 +127,20 @@ Maps JavaScript API, restricted to `http://localhost:5173/*` and to that one API
 
 `/dev/map` (development only) shows the map and its markers with sample points.
 
+## Looking at the database
+
+Two ways to browse the tables, with the local database from `docker compose` running:
+
+- **Drizzle Studio** (made for this project's schema): `npm run db:studio -w @junro/server`, then
+  open https://local.drizzle.studio. Browse, filter and edit rows, and follow the links between
+  tables.
+- **Adminer** (a plain web page): `docker compose --profile tools up -d adminer`, then open
+  http://localhost:8081. Choose "PostgreSQL", server `postgres`, user `junro`, password `junro`,
+  database `junro` (or `junro_test` for the test database).
+
+From a desktop tool (DBeaver, pgAdmin, the VS Code PostgreSQL extension) connect to
+`localhost`, port `5434`, user `junro`, password `junro`.
+
 ## Airports
 
 The `airports` table holds about 300 of the world's biggest and busiest airports, at least one

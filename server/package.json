@@ -9,7 +9,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file=../.env src/db/migrate-cli.ts",
     "db:seed:airports": "tsx --env-file=../.env src/airports/seed-cli.ts",
-    "airports:build": "tsx scripts/build-airports.ts"
+    "airports:build": "tsx scripts/build-airports.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "connect-pg-simple": "^10.0.0",
