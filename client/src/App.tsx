@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { useMe } from './auth/useMe';
+import { useSignOut } from './auth/useSignOut';
+import { Landing } from './landing/Landing';
 
 // Only in `npm run dev`: a page for looking at the map while building.
 const MapDemo = import.meta.env.DEV
@@ -8,20 +10,16 @@ const MapDemo = import.meta.env.DEV
   : null;
 
 /** Placeholder screens: the real ones come in the next tasks of M4. */
-function Landing() {
-  return (
-    <main>
-      <h1>Your trip, in the right order.</h1>
-      <a href="/api/auth/google">Sign in</a>
-    </main>
-  );
-}
-
 function Trips({ name }: { name: string }) {
+  const signOut = useSignOut();
   return (
     <main>
       <h1>Your trips</h1>
       <p>Signed in as {name}</p>
+      <button type="button" onClick={() => signOut.mutate()} disabled={signOut.isPending}>
+        Sign out
+      </button>
+      {signOut.isError && <p role="alert">Could not sign you out. Try again.</p>}
     </main>
   );
 }
