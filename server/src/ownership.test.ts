@@ -43,6 +43,7 @@ const routes: Array<{ method: 'get' | 'post' | 'patch' | 'delete'; path: string;
     { method: 'patch', path: '/stages/:stage', body: { done: true } },
     { method: 'delete', path: '/stages/:stage' },
     { method: 'post', path: '/days/:day/solve', body: { mode: 'full' } },
+    { method: 'get', path: '/days/:day/route' },
     { method: 'get', path: '/places/search' },
     { method: 'get', path: '/airports?q=tlv' },
     { method: 'post', path: '/places', body: { googlePlaceId: 'ChIJ-some-place-id' } },

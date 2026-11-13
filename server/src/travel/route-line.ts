@@ -7,6 +7,29 @@ import type { MapsClient } from '../google/types.js';
 
 const key = (p: LatLng) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`;
 
+/** What a stored line was made for: the mode and the stops in order. A different route has a different one. */
+function routeFingerprint(mode: TravelMode, route: LatLng[]): string {
+  return createHash('sha256')
+    .update(`${mode}|${route.map(key).join('>')}`)
+    .digest('hex');
+}
+
+/** The stored line for exactly this route, or null. Never calls Google. */
+export async function readRouteLine(args: {
+  db: Db;
+  dayId: string;
+  mode: TravelMode;
+  route: LatLng[];
+}): Promise<string | null> {
+  const [day] = await args.db
+    .select({ polyline: days.polyline, polylineKey: days.polylineKey })
+    .from(days)
+    .where(eq(days.id, args.dayId));
+  return day?.polyline && day.polylineKey === routeFingerprint(args.mode, args.route)
+    ? day.polyline
+    : null;
+}
+
 /**
  * The line to draw on the map for a finished route. One Google call, and only when the
  * route is not the one we already drew: the line is stored on the day, together with a
@@ -26,9 +49,7 @@ export async function loadRouteLine(args: {
   if (route.length < 2) return null;
   if (route.length === 2 && key(route[0]!) === key(route[1]!)) return null;
 
-  const fingerprint = createHash('sha256')
-    .update(`${mode}|${route.map(key).join('>')}`)
-    .digest('hex');
+  const fingerprint = routeFingerprint(mode, route);
 
   const [day] = await db
     .select({ polyline: days.polyline, polylineKey: days.polylineKey })

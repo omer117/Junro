@@ -6,20 +6,18 @@ import {
   solve,
   type SolveInput,
   type SolveResult,
-  type Stage,
 } from '@junro/solver';
-import { asc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { categoryPreferences, places, stages } from '../db/schema.js';
+import { stages } from '../db/schema.js';
 import { HttpError } from '../errors.js';
 import { GoogleNotConfiguredError } from '../google/errors.js';
-import { windowForDate } from '../google/opening-hours.js';
-import type { MapsClient, OpeningHours } from '../google/types.js';
+import type { MapsClient } from '../google/types.js';
 import type { RateLimiter } from '../rate-limit.js';
-import { resolveStayMinutes } from '../stay.js';
+import { loadDayProblem } from '../travel/day-problem.js';
 import { loadTravelTimes } from '../travel/matrix.js';
 import { loadRouteLine } from '../travel/route-line.js';
 import { validateBody } from '../validate.js';
@@ -55,37 +53,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       throw new HttpError(429, 'rate_limited', 'Too many route calculations. Wait a moment.');
     }
 
-    // The day's stages with their places, in the order they were added. A full solve always
-    // starts from this order, so the same stages give the same answer every time (stages that
-    // tie, for example two at the same distance, never swap places between runs).
-    const rows = await db
-      .select({ stage: stages, place: places })
-      .from(stages)
-      .innerJoin(places, eq(stages.placeId, places.id))
-      .where(eq(stages.dayId, day.id))
-      .orderBy(asc(stages.createdAt), asc(stages.id));
-
-    const preferences = await db
-      .select()
-      .from(categoryPreferences)
-      .where(eq(categoryPreferences.userId, userId));
-    const preferred = new Map(preferences.map((p) => [p.category, p.stayMinutes]));
-
-    // Stay: stage override, then the user's preference, then the system minimum.
-    // Opening hours: that weekday's window, or "closed all day".
-    const solverStages: Stage[] = rows.map(({ stage, place }) => ({
-      id: stage.id,
-      location: { lat: place.lat, lng: place.lng },
-      stayMinutes: resolveStayMinutes({
-        category: stage.category,
-        preference: preferred.get(stage.category),
-        override: stage.stayOverrideMinutes,
-      }),
-      ...windowForDate(place.openingHours as OpeningHours | null, day.date),
-    }));
-
-    const start = { lat: day.startLat, lng: day.startLng };
-    const end = { lat: day.endLat, lng: day.endLng };
+    const { start, end, solverStages, savedIds } = await loadDayProblem(db, userId, day);
 
     // All travel times for the day, fetched (or read from the cache) before solving.
     const travelTime = await loadTravelTimes({
@@ -103,10 +71,6 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       travelTime,
     };
 
-    const savedIds = rows
-      .filter((r) => r.stage.position !== null)
-      .sort((a, b) => a.stage.position! - b.stage.position!)
-      .map((r) => r.stage.id);
     const mode = requested === 'minimal' && savedIds.length > 0 ? 'minimal' : 'full';
 
     let result: SolveResult;
