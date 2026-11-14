@@ -1,3 +1,26 @@
+export interface Leg {
+  mode: 'walk' | 'transit';
+  minutes: number;
+}
+
+/** One step of a public transport option: walking, or riding a line. */
+export interface TransitStep {
+  kind: 'walk' | 'transit';
+  minutes: number;
+  line?: string;
+  vehicle?: string;
+  stops?: number;
+  headsign?: string;
+}
+
+/** One way of making a leg by public transport. */
+export interface TransitOption {
+  minutes: number;
+  walkMinutes: number;
+  transfers: number;
+  steps: TransitStep[];
+}
+
 export interface Visit {
   stageId: string;
   /** Minutes since midnight. */
@@ -26,6 +49,11 @@ export interface RouteResult {
   totalLateness: number;
   /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
   live: { lat: number; lng: number; time: number } | null;
+  /**
+   * Public transport days: each leg of the route (start to first stop, stop to stop, last stop to
+   * end), on foot or by public transport, and how long it takes.
+   */
+  legs?: Leg[];
   /** The encoded line to draw on the map, or null. */
   routeLine: string | null;
   /** Set when only the line failed: the order and times are still good. */

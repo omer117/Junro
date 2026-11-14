@@ -27,7 +27,14 @@ const usedDetails = async () =>
   (
     await createUsageGuard({
       db,
-      caps: { autocomplete: 1e9, placeDetails: 1e9, routeMatrix: 1e9, computeRoutes: 1e9 },
+      caps: {
+        autocomplete: 1e9,
+        placeDetails: 1e9,
+        routeMatrix: 1e9,
+        computeRoutes: 1e9,
+        transitMatrix: 1e9,
+        transitRoutes: 1e9,
+      },
     }).usage()
   ).placeDetails;
 
@@ -131,7 +138,14 @@ describe('POST /places', () => {
 
   it('stops before Google when the monthly cap is reached, but still serves stored places', async () => {
     const { agent, maps } = await setup({
-      quotaCaps: { autocomplete: 1, placeDetails: 1, routeMatrix: 1, computeRoutes: 1 },
+      quotaCaps: {
+        autocomplete: 1,
+        placeDetails: 1,
+        routeMatrix: 1,
+        computeRoutes: 1,
+        transitMatrix: 1,
+        transitRoutes: 1,
+      },
     });
     await agent.post('/places').send({ googlePlaceId: sensoji.googlePlaceId }).expect(201);
 

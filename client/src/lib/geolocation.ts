@@ -1,6 +1,6 @@
 import type { LatLng } from '../map/engine';
 
-export type LocationProblem = 'denied' | 'unavailable' | 'unsupported';
+export type LocationProblem = 'denied' | 'unavailable' | 'timeout' | 'unsupported';
 
 export class LocationError extends Error {
   constructor(readonly reason: LocationProblem) {
@@ -20,9 +20,13 @@ export function currentPosition(): Promise<LatLng> {
     }
     navigator.geolocation.getCurrentPosition(
       (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
-      // Error code 1 is PERMISSION_DENIED; 2 (position unavailable) and 3 (timeout) are both
-      // "could not find you".
-      (error) => reject(new LocationError(error.code === 1 ? 'denied' : 'unavailable')),
+      // Error code 1 is PERMISSION_DENIED, 2 is POSITION_UNAVAILABLE and 3 is TIMEOUT.
+      (error) =>
+        reject(
+          new LocationError(
+            error.code === 1 ? 'denied' : error.code === 3 ? 'timeout' : 'unavailable',
+          ),
+        ),
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
     );
   });

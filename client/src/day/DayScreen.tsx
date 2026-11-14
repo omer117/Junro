@@ -45,6 +45,7 @@ const NOTABLE_WAIT_MINUTES = 5;
 const MODES: Array<{ mode: TravelMode; label: string }> = [
   { mode: 'walking', label: 'Walking' },
   { mode: 'driving', label: 'Driving' },
+  { mode: 'transit', label: 'Transit' },
 ];
 
 /** Stops in route order; before a route exists, in the order they were added. */
@@ -188,9 +189,11 @@ export function DayScreen() {
       setLocationProblem(
         error instanceof LocationError && error.reason === 'denied'
           ? 'Allow location for this site in your browser (the icon next to the address), then try again.'
-          : error instanceof LocationError && error.reason === 'unsupported'
-            ? 'This browser cannot share your location.'
-            : 'Could not find where you are. Move to an open spot and try again.',
+          : error instanceof LocationError && error.reason === 'timeout'
+            ? 'No location yet. If your browser is asking for permission, allow it, then try again.'
+            : error instanceof LocationError && error.reason === 'unsupported'
+              ? 'This browser cannot share your location.'
+              : 'Could not find where you are. Move to an open spot and try again.',
       );
     } finally {
       setLocating(false);
@@ -266,15 +269,6 @@ export function DayScreen() {
               {label}
             </button>
           ))}
-          <button
-            type="button"
-            role="radio"
-            aria-checked="false"
-            className="mode-chip mode-chip--soon"
-            disabled
-          >
-            Transit · soon
-          </button>
         </div>
 
         {problem && <p role="alert">{problem}</p>}
@@ -291,6 +285,7 @@ export function DayScreen() {
                 returnsToStart: isSamePlace(day.data.start, day.data.end),
               }}
               stopNames={stopNames}
+              dayId={day.data.id}
               doneStops={doneStops}
               onToggleDone={(id, done) => updateStage.mutate({ id, done })}
             />

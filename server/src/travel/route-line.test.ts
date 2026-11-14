@@ -149,15 +149,15 @@ describe('loadRouteLine', () => {
     const fake = maps();
     const dayId = await newDay();
 
-    for (let x = 1; x <= 12; x++) {
+    for (let x = 1; x <= 70; x++) {
       await loadRouteLine({ db, maps: fake, dayId, mode: 'walking', route: [p(0), p(x), p(0)] });
     }
 
     const [day] = await db.select().from(days).where(eq(days.id, dayId));
-    expect(day!.routeLines).toHaveLength(8);
+    expect(day!.routeLines).toHaveLength(60);
     // The newest is still there, the oldest is gone.
     expect(
-      await readRouteLine({ db, dayId, mode: 'walking', route: [p(0), p(12), p(0)] }),
+      await readRouteLine({ db, dayId, mode: 'walking', route: [p(0), p(70), p(0)] }),
     ).not.toBeNull();
     expect(
       await readRouteLine({ db, dayId, mode: 'walking', route: [p(0), p(1), p(0)] }),

@@ -1,6 +1,9 @@
-import { Check, CircleAlert } from 'lucide-react';
+import { Check, CircleAlert, Footprints, TrainFront } from 'lucide-react';
+import { Fragment } from 'react';
 import { formatClock } from '../lib/dates';
+import { formatDuration } from '../lib/duration';
 import { describeRoute, stopNotes, type DayFacts } from './describe';
+import { LegWays } from './LegWays';
 import type { RouteResult } from './types';
 
 /**
@@ -11,12 +14,15 @@ export function RouteSummary({
   route,
   day,
   stopNames,
+  dayId,
   doneStops = [],
   onToggleDone,
 }: {
   route: RouteResult;
   day: DayFacts & { startName: string | null };
   stopNames: Map<string, string>;
+  /** Public transport days: the day, so the other ways of a leg can be asked for. */
+  dayId?: string;
   /** Stops already visited, in the order they were done. */
   doneStops?: Array<{ id: string; name: string }>;
   onToggleDone?: (stageId: string, done: boolean) => void;
@@ -25,6 +31,57 @@ export function RouteSummary({
   const startTime = route.live ? route.live.time : day.startTime;
   const startName = route.live ? 'Your location' : (day.startName ?? 'Start');
   const { headline, detail } = describeRoute({ ...day, startTime }, route);
+
+  // The leg after each place of the route (start, every stop in order): how you get to the next.
+  const names = [
+    startName,
+    ...route.visits.map((visit) => stopNames.get(visit.stageId) ?? 'Stop'),
+    day.endName ?? 'End',
+  ];
+  const legAfter = (index: number) => {
+    const leg = route.legs?.[index];
+    if (!leg) return null;
+    const Icon = leg.mode === 'walk' ? Footprints : TrainFront;
+    // The leg starts when you leave the place before it.
+    const at = index === 0 ? startTime : route.visits[index - 1]!.departure;
+    return (
+      <li className="timeline__leg">
+        <Icon size={16} aria-hidden="true" />
+        <span>{`${leg.mode === 'walk' ? 'Walk' : 'Transit'} · ${formatDuration(leg.minutes)}`}</span>
+        {leg.mode === 'transit' && dayId && (
+          <LegWays
+            dayId={dayId}
+            index={index}
+            at={Math.round(at)}
+            from={names[index]!}
+            to={names[index + 1]!}
+          />
+        )}
+      </li>
+    );
+  };
+
+  // Stops already visited. They happened before the plan below: after the start of the day, or,
+  // when the day was replanned from where you are, before "Your location".
+  const doneRows = doneStops.map((stop) => (
+    <li key={stop.id} className="timeline__row timeline__row--done">
+      <span className="timeline__dot timeline__dot--done" aria-hidden="true">
+        <Check size={12} />
+      </span>
+      <span className="timeline__name">{stop.name}</span>
+      <span className="timeline__time">Done</span>
+      {onToggleDone && (
+        <button
+          type="button"
+          className="timeline__toggle"
+          aria-label={`Undo done for ${stop.name}`}
+          onClick={() => onToggleDone(stop.id, false)}
+        >
+          Undo
+        </button>
+      )}
+    </li>
+  ));
 
   return (
     <section className="route-summary" aria-label="Your route">
@@ -37,58 +94,44 @@ export function RouteSummary({
       )}
 
       <ol aria-label="Timeline" className="timeline">
-        {doneStops.map((stop) => (
-          <li key={stop.id} className="timeline__row timeline__row--done">
-            <span className="timeline__dot timeline__dot--done" aria-hidden="true">
-              <Check size={12} />
-            </span>
-            <span className="timeline__name">{stop.name}</span>
-            <span className="timeline__time">Done</span>
-            {onToggleDone && (
-              <button
-                type="button"
-                className="timeline__toggle"
-                aria-label={`Undo done for ${stop.name}`}
-                onClick={() => onToggleDone(stop.id, false)}
-              >
-                Undo
-              </button>
-            )}
-          </li>
-        ))}
+        {route.live && doneRows}
         <li className="timeline__row timeline__row--end">
           <span className="timeline__dot timeline__dot--hollow" aria-hidden="true" />
           <span className="timeline__name">{startName}</span>
           <span className="timeline__time">{formatClock(startTime)}</span>
         </li>
-        {route.visits.map((visit) => {
+        {!route.live && doneRows}
+        {legAfter(0)}
+        {route.visits.map((visit, visitIndex) => {
           const notes = stopNotes(visit, route.violations);
           const name = stopNames.get(visit.stageId) ?? 'Stop';
           return (
-            <li
-              key={visit.stageId}
-              className={notes.length > 0 ? 'timeline__row timeline__row--warn' : 'timeline__row'}
-            >
-              <span className="timeline__dot" aria-hidden="true" />
-              <span className="timeline__name">{name}</span>
-              <span className="timeline__time">{formatClock(visit.arrival)}</span>
-              {onToggleDone && (
-                <button
-                  type="button"
-                  className="timeline__toggle"
-                  aria-label={`Mark ${name} as done`}
-                  onClick={() => onToggleDone(visit.stageId, true)}
-                >
-                  Done
-                </button>
-              )}
-              {notes.map((note) => (
-                <p key={note} className="timeline__note">
-                  <CircleAlert size={16} aria-hidden="true" />
-                  {note}
-                </p>
-              ))}
-            </li>
+            <Fragment key={visit.stageId}>
+              <li
+                className={notes.length > 0 ? 'timeline__row timeline__row--warn' : 'timeline__row'}
+              >
+                <span className="timeline__dot" aria-hidden="true" />
+                <span className="timeline__name">{name}</span>
+                <span className="timeline__time">{formatClock(visit.arrival)}</span>
+                {onToggleDone && (
+                  <button
+                    type="button"
+                    className="timeline__toggle"
+                    aria-label={`Mark ${name} as done`}
+                    onClick={() => onToggleDone(visit.stageId, true)}
+                  >
+                    Done
+                  </button>
+                )}
+                {notes.map((note) => (
+                  <p key={note} className="timeline__note">
+                    <CircleAlert size={16} aria-hidden="true" />
+                    {note}
+                  </p>
+                ))}
+              </li>
+              {legAfter(visitIndex + 1)}
+            </Fragment>
           );
         })}
         <li className="timeline__row timeline__row--end">

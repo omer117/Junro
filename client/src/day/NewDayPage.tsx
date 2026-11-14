@@ -127,7 +127,7 @@ export function NewDayPage() {
 
         <fieldset className="new-day__mode">
           <legend>Travel mode</legend>
-          {(['walking', 'driving'] as const).map((value) => (
+          {(['walking', 'driving', 'transit'] as const).map((value) => (
             <label key={value}>
               <input
                 type="radio"
@@ -135,7 +135,7 @@ export function NewDayPage() {
                 checked={mode === value}
                 onChange={() => setMode(value)}
               />
-              {value === 'walking' ? 'Walking' : 'Driving'}
+              {value === 'walking' ? 'Walking' : value === 'driving' ? 'Driving' : 'Transit'}
             </label>
           ))}
         </fieldset>

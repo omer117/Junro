@@ -13,6 +13,8 @@ const caps = (over: Partial<QuotaCaps> = {}): QuotaCaps => ({
   placeDetails: 100,
   routeMatrix: 100,
   computeRoutes: 100,
+  transitMatrix: 100,
+  transitRoutes: 100,
   ...over,
 });
 

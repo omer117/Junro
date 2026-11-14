@@ -176,11 +176,18 @@ describe('DayScreen', () => {
     expect(requests.find((r) => r.method === 'PATCH')!.body).toEqual({ travelMode: 'driving' });
   });
 
-  it('shows transit as coming later, and not selectable', async () => {
-    setup();
+  it('offers public transport as a travel mode, and changes the day to it', async () => {
+    const { requests } = setup({
+      handlers: { 'PATCH /api/days/d1': () => json(200, { ...day, travelMode: 'transit' }) },
+    });
 
     const group = await screen.findByRole('radiogroup', { name: /travel mode/i });
-    expect(within(group).getByRole('radio', { name: /transit/i })).toBeDisabled();
+    expect(within(group).getByRole('radio', { name: 'Transit' })).not.toBeDisabled();
+    await userEvent.click(within(group).getByRole('radio', { name: 'Transit' }));
+
+    await vi.waitFor(() =>
+      expect(requests.find((r) => r.method === 'PATCH')!.body).toEqual({ travelMode: 'transit' }),
+    );
   });
 
   it('adds a stop: search, choose the place, then say what kind of place it is', async () => {

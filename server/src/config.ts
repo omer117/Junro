@@ -13,6 +13,9 @@ export const DEFAULT_QUOTA_CAPS: QuotaCaps = {
   placeDetails: 800,
   routeMatrix: 4000,
   computeRoutes: 4000,
+  // Public transport is billed like the basic tier (10,000 free a month); these stay well below.
+  transitMatrix: 3000,
+  transitRoutes: 1500,
 };
 
 export interface Config {
@@ -61,6 +64,8 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       placeDetails: cap('GOOGLE_CAP_PLACE_DETAILS', DEFAULT_QUOTA_CAPS.placeDetails),
       routeMatrix: cap('GOOGLE_CAP_ROUTE_MATRIX', DEFAULT_QUOTA_CAPS.routeMatrix),
       computeRoutes: cap('GOOGLE_CAP_COMPUTE_ROUTES', DEFAULT_QUOTA_CAPS.computeRoutes),
+      transitMatrix: cap('GOOGLE_CAP_TRANSIT_MATRIX', DEFAULT_QUOTA_CAPS.transitMatrix),
+      transitRoutes: cap('GOOGLE_CAP_TRANSIT_ROUTES', DEFAULT_QUOTA_CAPS.transitRoutes),
     },
     google:
       googleSet.length === 0

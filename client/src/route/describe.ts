@@ -28,10 +28,13 @@ export function describeRoute(
   const place = day.endName ?? (day.returnsToStart ? 'the start' : 'the end');
   const verb = day.returnsToStart ? 'Back at' : 'Finish at';
   const nextDay = route.endArrival >= 1440 ? ' the next day' : '';
-  const noun = day.travelMode === 'driving' ? 'driving' : 'walking';
+  const travel = formatDuration(travelMinutes(day.startTime, route));
   return {
     headline: `${verb} ${place} by ${formatClock(route.endArrival)}${nextDay}`,
-    detail: `${formatDuration(travelMinutes(day.startTime, route))} of ${noun}, the rest is yours`,
+    detail:
+      day.travelMode === 'transit'
+        ? `${travel} getting around, the rest is yours`
+        : `${travel} of ${day.travelMode === 'driving' ? 'driving' : 'walking'}, the rest is yours`,
   };
 }
 

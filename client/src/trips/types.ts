@@ -1,6 +1,6 @@
 import type { Airport } from '../airports/types';
 
-export type TravelMode = 'walking' | 'driving';
+export type TravelMode = 'walking' | 'driving' | 'transit';
 
 export interface Trip {
   id: string;

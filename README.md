@@ -190,6 +190,31 @@ Maps JavaScript API, restricted to `http://localhost:5173/*` and to that one API
 
 `/dev/map` (development only) shows the map and its markers with sample points.
 
+### Public transport
+
+A transit day is planned like any other; only the travel times differ (`server/src/travel/hybrid.ts`):
+
+1. Walking times between all points are fetched (cheap, cached per day).
+2. For pairs further apart than a short walk (10 minutes), public transport times are requested from
+   the Routes API, one origin at a time, for the day's local start time (the time zone comes from
+   the coordinates). Pairs within a short walk are never asked about: cheaper, and the better choice.
+3. Each pair gets the shorter of the two, and the solver runs unchanged (it only ever sees a
+   `travelTime(from, to, departureTime)` function).
+
+Limits worth knowing:
+
+- Google answers public transport matrices for at most 100 elements per request, so they are
+  requested per origin. A public transport route cannot have stops in between, so the map line is
+  drawn leg by leg and joined (each leg is stored and reused).
+- Timetables change through the day, but the whole day is planned for one departure moment (the
+  day's start, or the moment you replan). Times are estimates, not a timetable. Stored times are
+  kept per hour.
+- "Other ways" asks Google for up to a few alternatives for one leg, only when opened.
+- Public transport has its own monthly caps (`GOOGLE_CAP_TRANSIT_MATRIX`, counted in matrix
+  elements, and `GOOGLE_CAP_TRANSIT_ROUTES`), so it can be switched off alone with `0`. Google bills
+  it in the basic tier (10,000 free a month at the time of writing). Raise the daily quotas of the
+  Routes API in Google Cloud to match, as a transit day needs more matrix elements than a walking one.
+
 ## Looking at the database
 
 Two ways to browse the tables, with the local database from `docker compose` running:
