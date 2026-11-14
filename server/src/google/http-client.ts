@@ -59,12 +59,20 @@ function toTransitOption(route: RawTransitRoute): TransitOption {
         ...(details?.headsign ? { headsign: details.headsign } : {}),
       };
     });
-  const rides = steps.filter((step) => step.kind === 'transit').length;
+  // Walking steps that follow each other are one walk, and a walk of no time is not shown.
+  const merged: TransitStep[] = [];
+  for (const step of steps) {
+    const last = merged[merged.length - 1];
+    if (step.kind === 'walk' && step.minutes === 0) continue;
+    if (step.kind === 'walk' && last?.kind === 'walk') last.minutes += step.minutes;
+    else merged.push({ ...step });
+  }
+  const rides = merged.filter((step) => step.kind === 'transit').length;
   return {
     minutes: minutesOf(route.duration),
-    walkMinutes: steps.filter((s) => s.kind === 'walk').reduce((sum, s) => sum + s.minutes, 0),
+    walkMinutes: merged.filter((s) => s.kind === 'walk').reduce((sum, s) => sum + s.minutes, 0),
     transfers: Math.max(rides - 1, 0),
-    steps,
+    steps: merged,
   };
 }
 
@@ -302,10 +310,19 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
             travelMode: 'TRANSIT',
             departureTime,
             computeAlternativeRoutes: true,
+            // Line names in English, not in the local script (Hebrew, Japanese...).
+            languageCode: 'en',
           },
         },
       )) as { routes?: RawTransitRoute[] };
-      return (data.routes ?? []).map(toTransitOption);
+      // Google sometimes sends the same option twice: show each once.
+      const seen = new Set<string>();
+      return (data.routes ?? []).map(toTransitOption).filter((option) => {
+        const signature = JSON.stringify(option);
+        if (seen.has(signature)) return false;
+        seen.add(signature);
+        return true;
+      });
     },
   };
 }

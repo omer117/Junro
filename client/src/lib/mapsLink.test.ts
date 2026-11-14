@@ -34,6 +34,18 @@ describe('googleMapsDirectionsUrl', () => {
     expect(url.searchParams.get('travelmode')).toBe('walking');
   });
 
+  it('writes coordinates without floating point noise', () => {
+    const url = parse(
+      googleMapsDirectionsUrl({
+        from: { lat: 35.6905539, lng: 139.81070040000003 },
+        to: { lat: 35.71, lng: 139.81 },
+        mode: 'transit',
+      }),
+    );
+
+    expect(url.searchParams.get('origin')).toBe('35.690554,139.8107');
+  });
+
   it('leaves the ids out for a point without one (the start of the day)', () => {
     const url = parse(
       googleMapsDirectionsUrl({

@@ -58,7 +58,9 @@ export function useSolve(dayId: string) {
  */
 export function useLegOptions(dayId: string, index: number, at: number, enabled: boolean) {
   return useQuery({
-    queryKey: ['days', dayId, 'legs', index, at],
+    // Not under ['days', dayId]: refreshing the day (a changed travel mode, a done stop) must not
+    // ask Google again, and a changed travel mode would make the request fail anyway.
+    queryKey: ['legs', dayId, index, at],
     queryFn: async () =>
       (
         await api<{ options: TransitOption[] }>(

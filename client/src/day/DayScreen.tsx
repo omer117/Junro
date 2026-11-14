@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/api';
 import { CATEGORIES, CATEGORY_LABELS, type Category } from '../categories';
 import { CategoryIcon } from '../icons/CategoryIcon';
-import { formatClock, formatDayTitle } from '../lib/dates';
+import { formatClock, formatDayTitle, todayString } from '../lib/dates';
 import { LocationError, currentPosition } from '../lib/geolocation';
 import { RadioChips } from '../lib/RadioChips';
 import { useMediaQuery } from '../lib/useMediaQuery';
@@ -250,7 +250,7 @@ export function DayScreen() {
         </Link>
         <PlaceSearch
           label="Add a stop"
-          placeholder="Add a stop — ramen, temple, bar…"
+          placeholder="Add a stop"
           near={day.data.start}
           onPick={(place) => {
             addStage.reset();
@@ -272,6 +272,7 @@ export function DayScreen() {
 
         <RadioChips
           label="Travel mode"
+          activation="manual"
           options={MODES}
           value={day.data.travelMode}
           disabled={updateDay.isPending}
@@ -290,8 +291,14 @@ export function DayScreen() {
                 startName: day.data.startName,
                 endName: day.data.endName,
                 returnsToStart: isSamePlace(day.data.start, day.data.end),
-                start: day.data.start,
-                end: day.data.end,
+                start: {
+                  ...day.data.start,
+                  ...(day.data.startPlaceId ? { googlePlaceId: day.data.startPlaceId } : {}),
+                },
+                end: {
+                  ...day.data.end,
+                  ...(day.data.endPlaceId ? { googlePlaceId: day.data.endPlaceId } : {}),
+                },
               }}
               stopNames={stopNames}
               stopPlaces={stopPlaces}
@@ -299,24 +306,26 @@ export function DayScreen() {
               doneStops={doneStops}
               onToggleDone={(id, done) => updateStage.mutate({ id, done })}
             />
-            <section className="live-plan" aria-labelledby="live-heading">
-              <h2 id="live-heading">Already on your way?</h2>
-              <p>
-                Junro uses your location once, right now, to plan the rest of your day. It is not
-                saved.
-              </p>
-              <button
-                type="button"
-                className="button button--outline"
-                disabled={locating || solve.isPending}
-                aria-busy={locating}
-                onClick={() => void replanFromHere()}
-              >
-                <LocateFixed size={20} aria-hidden="true" />
-                {locating ? 'Finding you…' : 'Recalculate from here'}
-              </button>
-              {locationProblem && <p role="alert">{locationProblem}</p>}
-            </section>
+            {day.data.date === todayString() && (
+              <section className="live-plan" aria-labelledby="live-heading">
+                <h2 id="live-heading">Already on your way?</h2>
+                <p>
+                  Junro uses your location once, right now, to plan the rest of your day. It is not
+                  saved.
+                </p>
+                <button
+                  type="button"
+                  className="button button--outline"
+                  disabled={locating || solve.isPending}
+                  aria-busy={locating}
+                  onClick={() => void replanFromHere()}
+                >
+                  <LocateFixed size={20} aria-hidden="true" />
+                  {locating ? 'Finding you…' : 'Recalculate from here'}
+                </button>
+                {locationProblem && <p role="alert">{locationProblem}</p>}
+              </section>
+            )}
             {savedRoute.routeLine === null && !savedRoute.routeLineError && (
               <button
                 type="button"

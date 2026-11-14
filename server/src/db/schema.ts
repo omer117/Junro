@@ -119,6 +119,9 @@ export const days = pgTable(
     /** What to call the two ends of the day, for example "Hotel". Optional. */
     startName: text('start_name'),
     endName: text('end_name'),
+    /** Google's ids of the start and end places, when they were chosen from a search. */
+    startPlaceId: text('start_place_id'),
+    endPlaceId: text('end_place_id'),
     /** Minutes since midnight, same unit as the solver. */
     startTime: integer('start_time').notNull(),
     travelMode: travelModeEnum('travel_mode').notNull(),

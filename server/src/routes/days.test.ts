@@ -46,6 +46,8 @@ describe('days API', () => {
       ...validDay,
       startName: null,
       endName: null,
+      startPlaceId: null,
+      endPlaceId: null,
       stageCount: 0,
     });
   });
@@ -150,6 +152,33 @@ describe('names for the two ends of a day', () => {
 
     expect(res.body.startName).toBeNull();
     expect(res.body.endName).toBeNull();
+  });
+
+  it("keeps Google's ids of the start and end places, so links can name them", async () => {
+    const { agent, trip } = await userWithTrip();
+
+    const res = await agent.post(`/trips/${trip.id}/days`).send({
+      ...validDay,
+      startPlaceId: 'ChIJ-start-place',
+      endPlaceId: 'ChIJ-end-place-1',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      startPlaceId: 'ChIJ-start-place',
+      endPlaceId: 'ChIJ-end-place-1',
+    });
+    expect((await agent.get(`/days/${res.body.id}`)).body.startPlaceId).toBe('ChIJ-start-place');
+  });
+
+  it('refuses a place id that cannot be a Google place id', async () => {
+    const { agent, trip } = await userWithTrip();
+
+    const res = await agent
+      .post(`/trips/${trip.id}/days`)
+      .send({ ...validDay, startPlaceId: 'not a place id!' });
+
+    expect(res.status).toBe(400);
   });
 
   it('keeps the names given when the day is created, and lets them change', async () => {
