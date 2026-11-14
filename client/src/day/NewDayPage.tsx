@@ -19,11 +19,14 @@ function PlaceField({
   changeLabel,
   place,
   onChange,
+  near,
 }: {
   question: string;
   changeLabel: string;
   place: Place | null;
   onChange: (place: Place | null) => void;
+  /** Where to look first. */
+  near?: { lat: number; lng: number };
 }) {
   if (place) {
     return (
@@ -44,7 +47,12 @@ function PlaceField({
       <span className="place-field__question" aria-hidden="true">
         {question}
       </span>
-      <PlaceSearch label={question} placeholder="Hotel, station, address…" onPick={onChange} />
+      <PlaceSearch
+        label={question}
+        placeholder="Hotel, station, address…"
+        onPick={onChange}
+        {...(near ? { near } : {})}
+      />
     </div>
   );
 }
@@ -120,6 +128,7 @@ export function NewDayPage() {
             changeLabel="Change end"
             place={end}
             onChange={setEnd}
+            {...(start ? { near: start } : {})}
           />
         )}
 

@@ -19,13 +19,22 @@ export interface Place {
 /** The server needs three letters; asking for fewer would waste a search. */
 export const MIN_SEARCH_LENGTH = 3;
 
-export function usePlaceSearch(text: string, sessionToken: string) {
+/**
+ * `near` is where the person is looking (for example where the day starts): results around it
+ * come first, so "Shinjuku Station" is the one in Tokyo and not one in New Jersey.
+ */
+export function usePlaceSearch(
+  text: string,
+  sessionToken: string,
+  near?: { lat: number; lng: number },
+) {
   const q = text.trim();
+  const area = near ? `&lat=${near.lat}&lng=${near.lng}` : '';
   return useQuery({
-    queryKey: ['place-search', sessionToken, q.toLowerCase()],
+    queryKey: ['place-search', sessionToken, q.toLowerCase(), near?.lat, near?.lng],
     queryFn: () =>
       api<PlaceSuggestion[]>(
-        `/places/search?q=${encodeURIComponent(q)}&sessionToken=${encodeURIComponent(sessionToken)}`,
+        `/places/search?q=${encodeURIComponent(q)}&sessionToken=${encodeURIComponent(sessionToken)}${area}`,
       ),
     enabled: q.length >= MIN_SEARCH_LENGTH,
     retry: false,

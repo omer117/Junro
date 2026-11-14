@@ -13,6 +13,25 @@ function fakeFetch(status: number, body: unknown) {
   );
 }
 
+describe('autocomplete near a place', () => {
+  it('asks Google to prefer results within 50 km of that place (a preference, not a limit)', async () => {
+    const fetch = fakeFetch(200, { suggestions: [] });
+    const client = createHttpMapsClient({ apiKey: 'KEY', fetch });
+
+    await client.autocomplete({
+      query: 'shinjuku',
+      sessionToken: 'session-1',
+      near: { lat: 35.69, lng: 139.7 },
+    });
+
+    expect(JSON.parse(String(fetch.mock.calls[0]![1]?.body))).toEqual({
+      input: 'shinjuku',
+      sessionToken: 'session-1',
+      locationBias: { circle: { center: { latitude: 35.69, longitude: 139.7 }, radius: 50000 } },
+    });
+  });
+});
+
 describe('autocomplete', () => {
   it('sends the query with the API key and session token, and keeps only place predictions', async () => {
     const fetch = fakeFetch(200, {

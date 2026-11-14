@@ -56,7 +56,12 @@ export interface PlaceDetails {
  * the difference, and never sees the API key.
  */
 export interface MapsClient {
-  autocomplete(input: { query: string; sessionToken: string }): Promise<PlaceSuggestion[]>;
+  /** `near` makes results around that place come first (a preference, not a limit). */
+  autocomplete(input: {
+    query: string;
+    sessionToken: string;
+    near?: LatLng;
+  }): Promise<PlaceSuggestion[]>;
   /** Billed per call, so callers fetch a place once and store it. */
   placeDetails(input: { googlePlaceId: string; sessionToken?: string }): Promise<PlaceDetails>;
   /**
