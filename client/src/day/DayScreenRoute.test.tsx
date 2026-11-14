@@ -46,6 +46,7 @@ const solved: RouteResult = {
   endArrival: 760,
   violations: [],
   totalLateness: 0,
+  live: null,
   routeLine: 'ENCODED-LINE',
 };
 

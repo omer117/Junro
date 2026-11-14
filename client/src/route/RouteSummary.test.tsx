@@ -13,6 +13,7 @@ const route: RouteResult = {
   endArrival: 1180,
   violations: [{ stageId: 'a', kind: 'closed', minutesLate: 15 }],
   totalLateness: 15,
+  live: null,
   routeLine: 'line',
 };
 

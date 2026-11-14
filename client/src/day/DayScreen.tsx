@@ -1,10 +1,11 @@
-import { ChevronLeft, Route as RouteIcon, Trash2 } from 'lucide-react';
+import { ChevronLeft, LocateFixed, Route as RouteIcon, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/api';
 import { CATEGORIES, CATEGORY_LABELS, type Category } from '../categories';
 import { CategoryIcon } from '../icons/CategoryIcon';
 import { formatClock, formatDayTitle } from '../lib/dates';
+import { LocationError, currentPosition } from '../lib/geolocation';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { isSamePlace } from '../map/endpoints';
 import type { MapMarker } from '../map/engine';
@@ -86,6 +87,8 @@ export function DayScreen() {
   const [pending, setPending] = useState<Place | null>(null);
   const [editing, setEditing] = useState(false);
   const [animate, setAnimate] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locationProblem, setLocationProblem] = useState<string | null>(null);
   const wide = useMediaQuery(WIDE_SCREEN);
 
   // The line draws itself once, right after "Find my route", and not again when the day is reopened.
@@ -128,6 +131,7 @@ export function DayScreen() {
         category: stage.category,
         ...(hasRoute ? { number: index + 1 } : {}),
         ...(flagged.has(stage.id) ? { warning: true } : {}),
+        ...(stage.done ? { done: true } : {}),
       })),
       {
         id: 'end',
@@ -163,6 +167,36 @@ export function DayScreen() {
       },
     });
 
+  // Replan the rest of the day from where the person is, at the time it is now.
+  const replanFromHere = async () => {
+    setLocationProblem(null);
+    setLocating(true);
+    try {
+      const from = await currentPosition();
+      const clock = new Date();
+      const now = clock.getHours() * 60 + clock.getMinutes();
+      solve.mutate(
+        { mode: 'full', from, now },
+        {
+          onSuccess: () => {
+            setEditing(false);
+            setAnimate(true);
+          },
+        },
+      );
+    } catch (error) {
+      setLocationProblem(
+        error instanceof LocationError && error.reason === 'denied'
+          ? 'Allow location for this site in your browser (the icon next to the address), then try again.'
+          : error instanceof LocationError && error.reason === 'unsupported'
+            ? 'This browser cannot share your location.'
+            : 'Could not find where you are. Move to an open spot and try again.',
+      );
+    } finally {
+      setLocating(false);
+    }
+  };
+
   const addProblem =
     addStage.error instanceof ApiError && addStage.error.code === 'day_full'
       ? 'A day can have at most 15 stops.'
@@ -172,6 +206,9 @@ export function DayScreen() {
   const problem = addProblem ?? (solve.isError ? solveProblem(solve.error) : null);
 
   const showSummary = savedRoute !== null && !editing;
+  const doneStops = stages
+    .filter((stage) => stage.done)
+    .map((stage) => ({ id: stage.id, name: stage.place.name }));
 
   // Some stops have their place in a route and some do not: stops were added to a day that
   // already had a route. The person chooses how to fit them in.
@@ -254,7 +291,27 @@ export function DayScreen() {
                 returnsToStart: isSamePlace(day.data.start, day.data.end),
               }}
               stopNames={stopNames}
+              doneStops={doneStops}
+              onToggleDone={(id, done) => updateStage.mutate({ id, done })}
             />
+            <section className="live-plan" aria-labelledby="live-heading">
+              <h2 id="live-heading">Already on your way?</h2>
+              <p>
+                Junro uses your location once, right now, to plan the rest of your day. It is not
+                saved.
+              </p>
+              <button
+                type="button"
+                className="button button--outline"
+                disabled={locating || solve.isPending}
+                aria-busy={locating}
+                onClick={() => void replanFromHere()}
+              >
+                <LocateFixed size={20} aria-hidden="true" />
+                {locating ? 'Finding you…' : 'Recalculate from here'}
+              </button>
+              {locationProblem && <p role="alert">{locationProblem}</p>}
+            </section>
             {savedRoute.routeLine === null && !savedRoute.routeLineError && (
               <button
                 type="button"

@@ -33,6 +33,7 @@ const route = (over: Partial<RouteResult> = {}): RouteResult => ({
   endArrival: 660,
   violations: [],
   totalLateness: 0,
+  live: null,
   routeLine: 'line',
   ...over,
 });

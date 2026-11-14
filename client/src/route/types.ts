@@ -24,6 +24,8 @@ export interface RouteResult {
   endArrival: number;
   violations: Violation[];
   totalLateness: number;
+  /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
+  live: { lat: number; lng: number; time: number } | null;
   /** The encoded line to draw on the map, or null. */
   routeLine: string | null;
   /** Set when only the line failed: the order and times are still good. */
