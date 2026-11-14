@@ -24,5 +24,8 @@ export function fakeMaps(overrides: Partial<MapsClient> = {}): FakeMaps {
     computeRoute: vi.fn<MapsClient['computeRoute']>(
       overrides.computeRoute ?? unexpected('computeRoute'),
     ),
+    transitAlternatives: vi.fn<MapsClient['transitAlternatives']>(
+      overrides.transitAlternatives ?? unexpected('transitAlternatives'),
+    ),
   };
 }

@@ -28,9 +28,16 @@ export function withUsageGuard(client: MapsClient, guard: UsageGuard): MapsClien
     placeDetails: (input) => billed('placeDetails', 1, () => client.placeDetails(input)),
     // Google bills a matrix per element, not per request.
     routeMatrix: (input) =>
-      billed('routeMatrix', input.origins.length * input.destinations.length, () =>
-        client.routeMatrix(input),
+      billed(
+        input.mode === 'transit' ? 'transitMatrix' : 'routeMatrix',
+        input.origins.length * input.destinations.length,
+        () => client.routeMatrix(input),
       ),
-    computeRoute: (input) => billed('computeRoutes', 1, () => client.computeRoute(input)),
+    computeRoute: (input) =>
+      billed(input.mode === 'transit' ? 'transitRoutes' : 'computeRoutes', 1, () =>
+        client.computeRoute(input),
+      ),
+    transitAlternatives: (input) =>
+      billed('transitRoutes', 1, () => client.transitAlternatives(input)),
   };
 }

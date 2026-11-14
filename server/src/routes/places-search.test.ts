@@ -20,7 +20,14 @@ const usedAutocomplete = async () =>
   (
     await createUsageGuard({
       db,
-      caps: { autocomplete: 1e9, placeDetails: 1e9, routeMatrix: 1e9, computeRoutes: 1e9 },
+      caps: {
+        autocomplete: 1e9,
+        placeDetails: 1e9,
+        routeMatrix: 1e9,
+        computeRoutes: 1e9,
+        transitMatrix: 1e9,
+        transitRoutes: 1e9,
+      },
     }).usage()
   ).autocomplete;
 
@@ -86,7 +93,14 @@ describe('GET /places/search', () => {
 
   it('stops before Google when the monthly cap is reached', async () => {
     const { agent, maps } = await setup({
-      quotaCaps: { autocomplete: 1, placeDetails: 1, routeMatrix: 1, computeRoutes: 1 },
+      quotaCaps: {
+        autocomplete: 1,
+        placeDetails: 1,
+        routeMatrix: 1,
+        computeRoutes: 1,
+        transitMatrix: 1,
+        transitRoutes: 1,
+      },
     });
     await search(agent, 'first').expect(200);
 
@@ -99,7 +113,14 @@ describe('GET /places/search', () => {
 
   it('does not search at all when the cap is 0 (switched off)', async () => {
     const { agent, maps } = await setup({
-      quotaCaps: { autocomplete: 0, placeDetails: 1, routeMatrix: 1, computeRoutes: 1 },
+      quotaCaps: {
+        autocomplete: 0,
+        placeDetails: 1,
+        routeMatrix: 1,
+        computeRoutes: 1,
+        transitMatrix: 1,
+        transitRoutes: 1,
+      },
     });
 
     await search(agent, 'senso').expect(429);

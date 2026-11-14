@@ -89,7 +89,14 @@ describe('computeRoute through the usage guard', () => {
       await resetDb(db);
       const guard = createUsageGuard({
         db,
-        caps: { autocomplete: 100, placeDetails: 100, routeMatrix: 100, computeRoutes: 1 },
+        caps: {
+          autocomplete: 100,
+          placeDetails: 100,
+          routeMatrix: 100,
+          computeRoutes: 1,
+          transitMatrix: 1,
+          transitRoutes: 1,
+        },
       });
       const maps = fakeMaps({ computeRoute: async () => 'line' });
       const guarded = withUsageGuard(maps, guard);

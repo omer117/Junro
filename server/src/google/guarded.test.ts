@@ -16,6 +16,8 @@ const caps = (routeMatrix: number) => ({
   placeDetails: 100,
   routeMatrix,
   computeRoutes: 100,
+  transitMatrix: 100,
+  transitRoutes: 100,
 });
 
 describe('withUsageGuard', () => {

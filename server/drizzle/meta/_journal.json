@@ -71,6 +71,13 @@
       "when": 1794643283861,
       "tag": "0009_live_from",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794645118104,
+      "tag": "0010_transit_mode",
+      "breakpoints": true
     }
   ]
 }

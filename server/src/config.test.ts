@@ -57,6 +57,8 @@ describe('loadConfig', () => {
         placeDetails: 800,
         routeMatrix: 4000,
         computeRoutes: 4000,
+        transitMatrix: 3000,
+        transitRoutes: 1500,
       });
     });
 

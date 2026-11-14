@@ -43,7 +43,7 @@ export const CATEGORIES = [
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-export const TRAVEL_MODES = ['walking', 'driving'] as const;
+export const TRAVEL_MODES = ['walking', 'driving', 'transit'] as const;
 export type TravelMode = (typeof TRAVEL_MODES)[number];
 
 export const categoryEnum = pgEnum('category', CATEGORIES);

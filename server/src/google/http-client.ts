@@ -1,5 +1,11 @@
 import { GooglePlaceNotFoundError, GoogleRejectedError, GoogleUnavailableError } from './errors.js';
-import type { MapsClient, OpeningHours, PlaceSuggestion } from './types.js';
+import type {
+  MapsClient,
+  OpeningHours,
+  PlaceSuggestion,
+  TransitOption,
+  TransitStep,
+} from './types.js';
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -9,6 +15,57 @@ interface RawPlace {
   displayName?: { text?: string };
   location: { latitude: number; longitude: number };
   regularOpeningHours?: OpeningHours;
+}
+
+const GOOGLE_MODE = { walking: 'WALK', driving: 'DRIVE', transit: 'TRANSIT' } as const;
+
+/** What Google sends for one public transport route, limited to the fields we ask for. */
+interface RawTransitRoute {
+  duration?: string;
+  legs?: Array<{
+    steps?: Array<{
+      travelMode?: string;
+      staticDuration?: string;
+      transitDetails?: {
+        headsign?: string;
+        stopCount?: number;
+        transitLine?: { name?: string; nameShort?: string; vehicle?: { type?: string } };
+      };
+    }>;
+  }>;
+}
+
+const minutesOf = (duration: string | undefined): number =>
+  duration ? Math.round(parseFloat(duration) / 60) : 0;
+
+/** One Google route as a plain option: how long, how much walking, how many changes, the steps. */
+function toTransitOption(route: RawTransitRoute): TransitOption {
+  const steps: TransitStep[] = (route.legs ?? [])
+    .flatMap((leg) => leg.steps ?? [])
+    .map((step): TransitStep => {
+      if (step.travelMode !== 'TRANSIT') {
+        return { kind: 'walk', minutes: minutesOf(step.staticDuration) };
+      }
+      const details = step.transitDetails;
+      const line = details?.transitLine?.name ?? details?.transitLine?.nameShort;
+      return {
+        kind: 'transit',
+        minutes: minutesOf(step.staticDuration),
+        ...(line ? { line } : {}),
+        ...(details?.transitLine?.vehicle?.type
+          ? { vehicle: details.transitLine.vehicle.type }
+          : {}),
+        ...(details?.stopCount !== undefined ? { stops: details.stopCount } : {}),
+        ...(details?.headsign ? { headsign: details.headsign } : {}),
+      };
+    });
+  const rides = steps.filter((step) => step.kind === 'transit').length;
+  return {
+    minutes: minutesOf(route.duration),
+    walkMinutes: steps.filter((s) => s.kind === 'walk').reduce((sum, s) => sum + s.minutes, 0),
+    transfers: Math.max(rides - 1, 0),
+    steps,
+  };
 }
 
 export interface HttpMapsClientOptions {
@@ -131,7 +188,7 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
       };
     },
 
-    async routeMatrix({ origins, destinations, mode }) {
+    async routeMatrix({ origins, destinations, mode, departureTime }) {
       // Refuse here what Google would refuse anyway, so a bad request never spends quota.
       if (origins.length === 0 || destinations.length === 0) return [];
       if (origins.length > 25 || destinations.length > 25) {
@@ -139,6 +196,11 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
       }
       if (origins.length * destinations.length > 625) {
         throw new RangeError('A route matrix takes at most 625 elements');
+      }
+
+      // Google allows fewer elements per request for public transport.
+      if (mode === 'transit' && origins.length * destinations.length > 100) {
+        throw new RangeError('A transit route matrix takes at most 100 elements');
       }
 
       const waypoint = (p: { lat: number; lng: number }) => ({
@@ -152,9 +214,10 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
           body: {
             origins: origins.map(waypoint),
             destinations: destinations.map(waypoint),
-            travelMode: mode === 'walking' ? 'WALK' : 'DRIVE',
+            travelMode: GOOGLE_MODE[mode],
             // Without live traffic: the cheaper tier, and traffic is not part of the beta.
             ...(mode === 'driving' ? { routingPreference: 'TRAFFIC_UNAWARE' } : {}),
+            ...(mode === 'transit' && departureTime ? { departureTime } : {}),
           },
         },
       )) as Array<{
@@ -176,9 +239,12 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
       return seconds;
     },
 
-    async computeRoute({ origin, destination, intermediates, mode }) {
+    async computeRoute({ origin, destination, intermediates, mode, departureTime }) {
       if (intermediates.length > 25) {
         throw new RangeError('A route takes at most 25 stops in between');
+      }
+      if (mode === 'transit' && intermediates.length > 0) {
+        throw new RangeError('A public transport route cannot have stops in between');
       }
       const waypoint = (p: { lat: number; lng: number }) => ({
         location: { latLng: { latitude: p.lat, longitude: p.lng } },
@@ -192,9 +258,10 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
           body: {
             origin: waypoint(origin),
             destination: waypoint(destination),
-            intermediates: intermediates.map(waypoint),
-            travelMode: mode === 'walking' ? 'WALK' : 'DRIVE',
+            ...(intermediates.length > 0 ? { intermediates: intermediates.map(waypoint) } : {}),
+            travelMode: GOOGLE_MODE[mode],
             ...(mode === 'driving' ? { routingPreference: 'TRAFFIC_UNAWARE' } : {}),
+            ...(mode === 'transit' && departureTime ? { departureTime } : {}),
           },
         },
       )) as { routes?: Array<{ polyline?: { encodedPolyline?: string } }> };
@@ -202,6 +269,29 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
       const line = data.routes?.[0]?.polyline?.encodedPolyline;
       if (!line) throw new GoogleRejectedError(200);
       return line;
+    },
+
+    async transitAlternatives({ origin, destination, departureTime }) {
+      const waypoint = (p: { lat: number; lng: number }) => ({
+        location: { latLng: { latitude: p.lat, longitude: p.lng } },
+      });
+      const data = (await call(
+        'POST',
+        'https://routes.googleapis.com/directions/v2:computeRoutes',
+        {
+          // Only what the options need: how long, and the steps with their lines.
+          fieldMask:
+            'routes.duration,routes.legs.steps.travelMode,routes.legs.steps.staticDuration,routes.legs.steps.transitDetails',
+          body: {
+            origin: waypoint(origin),
+            destination: waypoint(destination),
+            travelMode: 'TRANSIT',
+            departureTime,
+            computeAlternativeRoutes: true,
+          },
+        },
+      )) as { routes?: RawTransitRoute[] };
+      return (data.routes ?? []).map(toTransitOption);
     },
   };
 }

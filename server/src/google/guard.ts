@@ -10,10 +10,15 @@ export const GOOGLE_APIS = [
   'placeDetails',
   'routeMatrix',
   'computeRoutes',
+  'transitMatrix',
+  'transitRoutes',
 ] as const;
 export type GoogleApi = (typeof GOOGLE_APIS)[number];
 
-/** Monthly caps. `routeMatrix` counts matrix elements (origins x destinations), the rest count calls. */
+/**
+ * Monthly caps. `routeMatrix` and `transitMatrix` count matrix elements (origins x destinations),
+ * the rest count calls. Public transport has caps of its own, so it can be switched off alone.
+ */
 export type QuotaCaps = Record<GoogleApi, number>;
 
 /** The billing month Google uses: it resets free usage at midnight Pacific time on the 1st. */

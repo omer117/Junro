@@ -329,7 +329,14 @@ describe('POST /days/:id/solve', () => {
     it('stops with a clear message when the monthly matrix budget is used up, and saves nothing', async () => {
       const maps = goodMaps();
       const { agent, addStage, solve, day } = await setup(maps, {
-        quotaCaps: { autocomplete: 10, placeDetails: 10, routeMatrix: 3, computeRoutes: 10 },
+        quotaCaps: {
+          autocomplete: 10,
+          placeDetails: 10,
+          routeMatrix: 3,
+          computeRoutes: 10,
+          transitMatrix: 10,
+          transitRoutes: 10,
+        },
       });
       await addStage(10);
       await addStage(20);
