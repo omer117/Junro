@@ -235,6 +235,7 @@ export function DayScreen() {
         <PlaceSearch
           label="Add a stop"
           placeholder="Add a stop — ramen, temple, bar…"
+          near={day.data.start}
           onPick={(place) => {
             addStage.reset();
             setPending(place);

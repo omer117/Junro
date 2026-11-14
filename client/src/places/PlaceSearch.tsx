@@ -29,11 +29,14 @@ export function PlaceSearch({
   label,
   placeholder,
   onPick,
+  near,
   debounceMs = 250,
 }: {
   label: string;
   placeholder?: string;
   onPick: (place: Place) => void;
+  /** Where to look first, for example where the day starts. */
+  near?: { lat: number; lng: number };
   debounceMs?: number;
 }) {
   const id = useId();
@@ -42,7 +45,7 @@ export function PlaceSearch({
   const debounced = useDebouncedValue(text, debounceMs);
   // Search only once typing has settled, and never for text that is already gone (after a
   // choice the box is emptied; a late search for the old text would be a wasted call).
-  const search = usePlaceSearch(debounced === text ? debounced : '', token);
+  const search = usePlaceSearch(debounced === text ? debounced : '', token, near);
   const create = useCreatePlace();
 
   const choose = (googlePlaceId: string) =>
