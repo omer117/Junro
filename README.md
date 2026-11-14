@@ -9,9 +9,72 @@ is open.
 順路 (_junro_) means "the route to follow". It is the arrow sign you see in Japanese museums that
 tells you which way to walk next.
 
+## Live demo
+
+**https://junro.vercel.app** (sign in with Google).
+
+## What it does
+
+- **Trips and days.** A trip has an origin and a destination airport; each day has a start, an
+  end, a start time and a travel mode (walking or driving).
+- **Places.** Search with Google Places, pick a category (restaurant, temple, museum, transit
+  stop and so on). Each category has a minimum stay that you can raise but never lower.
+- **The fastest order.** "Find my route" picks the best order, shows the day as a timeline in
+  plain words ("Back at the hotel by 19:40"), and draws the route on the map. Stops that cannot
+  fit their opening hours are flagged, never dropped silently.
+- **Editing a day.** Add a stop to a day that already has a route and choose: _keep my order_
+  (the new stop goes where it adds the least time) or _recalculate everything_.
+- **A day in progress.** Mark stops as done, then _recalculate from here_: Junro plans the rest
+  of the day from where you are, at the current time, back to the same end point.
+
+## How it works
+
+```mermaid
+flowchart LR
+  Browser["Browser (React, Vite)"] -- "/api/* (same origin)" --> Vercel["Vercel (static + rewrite)"]
+  Vercel -- proxy --> Server["Express server (Oracle Cloud VM)"]
+  Server --> DB[("PostgreSQL")]
+  Server -- "usage guard" --> Google["Google Places and Routes"]
+  Browser -- "Maps JavaScript API (map only)" --> GoogleMaps["Google Maps"]
+  Server --> Solver["@junro/solver (pure TypeScript)"]
+```
+
+- **One origin.** The browser only ever talks to the Vercel domain. Vercel forwards `/api/*` to
+  the server, so the sign-in cookie is a plain first-party cookie (`Secure`, `HttpOnly`,
+  `SameSite=Lax`). The Google API key never leaves the server.
+- **The solver is pure.** `packages/solver` has no network, no database and no clock. It gets a
+  `travelTime(from, to, departureTime)` function and returns an order, arrival times and
+  violations. That is what makes it easy to test exhaustively (it is checked against brute force).
+- **Google is behind a guard.** Place details are fetched once and stored; travel times are cached
+  per day and only new pairs are requested; route lines are remembered per route. Every call is
+  counted against monthly caps and per-user rate limits. See "Protecting the free tier" below.
+
+### The route-ordering algorithm
+
+Finding the best order of stops is the travelling salesman problem with time windows, which has
+no known fast exact solution, but a day has few stops (at most 15), so Junro solves it exactly:
+
+- **Held-Karp dynamic programming** over subsets. A state is "which stops are visited, and which
+  was last". For each state the solver keeps the best ways to have got there, and extends them
+  one stop at a time. Time `O(2^n * n^2)`, memory `O(2^n * n)` (times the number of labels
+  below). For 15 stops that is about seven million steps per label, and a test keeps
+  the worst case under a second.
+- **Opening hours.** Arriving before a place opens means waiting; leaving after it closes means
+  lateness. The best order has the least total lateness first (zero when everything fits), then
+  the earliest return.
+- **Pareto labels.** When something has to be late, "less late but leaving later" and "more late
+  but leaving earlier" can each win in the end, so one number per state is not enough. The solver
+  keeps every label that no other label beats on both counts. Waiting is allowed, so leaving
+  earlier is never worse, and that makes the result exact.
+- **Two edit modes.** _Minimal change_ keeps your order and inserts a new stop where it adds the
+  least time (`insertStage`, `removeStage`). _Full recalculation_ runs the DP again.
+- **Beyond 15 stops** the solver refuses instead of freezing the machine.
+
 ## Status
 
-Beta in progress. The repository setup (M0), the solver (M1), the server core (M2) and the Google integration (M3) are done; the client (M4) is in progress.
+Beta, deployed. Done: repository setup (M0), the solver (M1), the server core (M2), the Google
+integration (M3), the client (M4), a day in progress (M5) and the deployment (M6). Public transit
+is next, after the beta.
 
 ## Tech stack
 
@@ -165,6 +228,32 @@ Sources and credits:
 - [OpenFlights](https://openflights.org/data), Open Database License: the routes file, used only
   to count routes per airport. It dates from 2014, so airports opened since then look quieter than
   they are, and the order inside the list is approximate.
+
+## Deployment
+
+- **Client:** Vercel, project root `client/`. `client/vercel.json` builds from the repository root
+  (npm workspaces), forwards `/api/*` to the server and falls back to `index.html` for client
+  routes. Set `VITE_GOOGLE_MAPS_BROWSER_KEY` in the project settings (a browser key is public by
+  nature; it is protected by its referrer and API restrictions in Google Cloud).
+- **Server:** one Ubuntu VM (Oracle Cloud free tier) with Node 22 and PostgreSQL, running as a
+  systemd service (`deploy/junro.service`). All settings, secrets included, live in
+  `/etc/junro.env` on the VM and are never in the repository: `NODE_ENV=production`, `PORT`,
+  `DATABASE_URL`, `SESSION_SECRET`, `CLIENT_URL`, the three `GOOGLE_*` sign-in variables and
+  `GOOGLE_API_KEY`.
+- **Sign-in:** in Google Cloud add `https://<your-domain>/api/auth/google/callback` as an
+  authorised redirect URI and the domain as a JavaScript origin, and put the same callback URL
+  in `GOOGLE_CALLBACK_URL`.
+- **Updating the server:**
+
+  ```bash
+  cd ~/Junro && git pull && npm ci
+  set -a && . /etc/junro.env && set +a
+  npm run db:migrate -w @junro/server
+  sudo systemctl restart junro
+  ```
+
+- Behind a proxy the server trusts one hop (`trust proxy`), so it can tell the browser used HTTPS
+  and send the `Secure` cookie.
 
 ## License
 
