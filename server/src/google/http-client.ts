@@ -149,9 +149,23 @@ export function createHttpMapsClient(options: HttpMapsClientOptions): MapsClient
   }
 
   return {
-    async autocomplete({ query, sessionToken }) {
+    async autocomplete({ query, sessionToken, near }) {
       const data = (await call('POST', 'https://places.googleapis.com/v1/places:autocomplete', {
-        body: { input: query, sessionToken },
+        body: {
+          input: query,
+          sessionToken,
+          // A bias, not a restriction: a person searching for a place far away still finds it.
+          ...(near
+            ? {
+                locationBias: {
+                  circle: {
+                    center: { latitude: near.lat, longitude: near.lng },
+                    radius: 50_000,
+                  },
+                },
+              }
+            : {}),
+        },
       })) as {
         suggestions?: Array<{ placePrediction?: { placeId: string; text?: { text?: string } } }>;
       };

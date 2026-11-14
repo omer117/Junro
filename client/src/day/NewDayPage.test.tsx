@@ -128,6 +128,22 @@ describe('NewDayPage', () => {
     ).toMatchObject({ travelMode: 'transit' });
   });
 
+  it('looks for the end of the day around where it starts', async () => {
+    const requests = setup();
+    await userEvent.type(screen.getByLabelText(/date/i), '2027-04-02');
+    await chooseStart();
+    await userEvent.click(screen.getByLabelText(/ends where it starts/i));
+
+    await userEvent.type(screen.getByLabelText(/where does the day end/i), 'ueno');
+
+    await vi.waitFor(() =>
+      expect(requests.filter((r) => r.url.startsWith('/api/places/search')).length).toBe(2),
+    );
+    const searches = requests.filter((r) => r.url.startsWith('/api/places/search'));
+    expect(searches[0]!.url).not.toContain('lat=');
+    expect(searches[1]!.url).toContain('lat=35.695');
+  });
+
   it('asks for a date and a start before it creates anything', async () => {
     const requests = setup();
 

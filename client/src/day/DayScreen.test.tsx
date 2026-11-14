@@ -190,6 +190,19 @@ describe('DayScreen', () => {
     );
   });
 
+  it('looks for places around where the day starts', async () => {
+    const { requests } = setup();
+
+    await userEvent.type(await screen.findByLabelText(/add a stop/i), 'kappa');
+
+    await vi.waitFor(() =>
+      expect(requests.some((r) => r.url.startsWith('/api/places/search'))).toBe(true),
+    );
+    const search = requests.find((r) => r.url.startsWith('/api/places/search'))!.url;
+    expect(search).toContain('lat=35.68');
+    expect(search).toContain('lng=139.76');
+  });
+
   it('adds a stop: search, choose the place, then say what kind of place it is', async () => {
     const { requests } = setup({
       handlers: {

@@ -166,4 +166,34 @@ describe('GET /places/search', () => {
     expect(res.status).toBe(503);
     expect(res.body.error.code).toBe('google_not_configured');
   });
+
+  describe('near a place', () => {
+    it('tells Google where the person is looking, so results come from around there', async () => {
+      const { maps, agent } = await setup();
+
+      await search(agent, 'shinjuku station').query({ lat: 35.69, lng: 139.7 }).expect(200);
+
+      expect(maps.autocomplete.mock.calls[0]![0].near).toEqual({ lat: 35.69, lng: 139.7 });
+    });
+
+    it('keeps results for one area apart from results for another, but shares them nearby', async () => {
+      const { maps, agent } = await setup();
+
+      await search(agent, 'station').query({ lat: 35.69, lng: 139.7 }).expect(200);
+      await search(agent, 'station').query({ lat: 35.691, lng: 139.701 }).expect(200); // same area
+      await search(agent, 'station').query({ lat: 40.7, lng: -74 }).expect(200); // elsewhere
+      await search(agent, 'station').expect(200); // anywhere
+
+      expect(maps.autocomplete).toHaveBeenCalledTimes(3);
+    });
+
+    it('refuses a place with only one of its two numbers, before Google', async () => {
+      const { maps, agent } = await setup();
+
+      await search(agent, 'station').query({ lat: 35.69 }).expect(400);
+      await search(agent, 'station').query({ lat: 200, lng: 10 }).expect(400);
+
+      expect(maps.autocomplete).not.toHaveBeenCalled();
+    });
+  });
 });
