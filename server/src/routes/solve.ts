@@ -18,8 +18,10 @@ import { GoogleNotConfiguredError } from '../google/errors.js';
 import type { MapsClient } from '../google/types.js';
 import type { RateLimiter } from '../rate-limit.js';
 import { loadDayProblem, remainingOf } from '../travel/day-problem.js';
+import { departureInstant } from '../travel/departure.js';
+import { legsOf, loadHybridTimes, type HybridTimes } from '../travel/hybrid.js';
 import { loadTravelTimes } from '../travel/matrix.js';
-import { loadRouteLine } from '../travel/route-line.js';
+import { loadRouteLine, loadTransitRouteLine } from '../travel/route-line.js';
 import { validateBody } from '../validate.js';
 import { uuidParam } from './helpers.js';
 import { requireOwnedDay } from './ownership.js';
@@ -76,13 +78,26 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     );
 
     // All travel times for the day, fetched (or read from the cache) before solving.
-    const travelTime = await loadTravelTimes({
-      db,
-      maps,
-      dayId: day.id,
-      mode: day.travelMode,
-      points: [start, end, ...solverStages.map((s) => s.location)],
-    });
+    // Public transport days walk where it is close and ride where it is far (see hybrid.ts).
+    const points = [start, end, ...solverStages.map((s) => s.location)];
+    const isTransit = day.travelMode === 'transit';
+    const departureTime = isTransit
+      ? departureInstant({ date: day.date, minutes: startTime, at: start, now: new Date() })
+      : null;
+    let hybrid: HybridTimes | null = null;
+    let travelTime: SolveInput['travelTime'];
+    if (departureTime) {
+      hybrid = await loadHybridTimes({ db, maps, dayId: day.id, points, departureTime });
+      travelTime = hybrid.travelTime;
+    } else {
+      travelTime = await loadTravelTimes({
+        db,
+        maps,
+        dayId: day.id,
+        mode: day.travelMode,
+        points,
+      });
+    }
     const input: SolveInput = {
       start,
       end,
@@ -114,20 +129,29 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
         await tx.update(stages).set({ position }).where(eq(stages.id, stageId));
       }
       // Remember where the day was replanned from (or forget it), so the saved route matches.
-      await tx.update(days).set({ liveFrom: live }).where(eq(days.id, day.id));
+      await tx
+        .update(days)
+        .set({ liveFrom: live, transitDeparture: departureTime })
+        .where(eq(days.id, day.id));
     });
 
     const byId = new Map(solverStages.map((s) => [s.id, s]));
     let routeLine: string | null = null;
     let routeLineError: string | undefined;
+    const route = [start, ...result.order.map((id) => byId.get(id)!.location), end];
+    const legs = hybrid ? legsOf(route, hybrid) : null;
     try {
-      routeLine = await loadRouteLine({
-        db,
-        maps,
-        dayId: day.id,
-        mode: day.travelMode,
-        route: [start, ...result.order.map((id) => byId.get(id)!.location), end],
-      });
+      routeLine =
+        hybrid && departureTime
+          ? await loadTransitRouteLine({
+              db,
+              maps,
+              dayId: day.id,
+              route,
+              legModes: legs!.map((leg) => leg.mode),
+              departureTime,
+            })
+          : await loadRouteLine({ db, maps, dayId: day.id, mode: day.travelMode, route });
     } catch (error) {
       if (!(error instanceof HttpError)) throw error;
       routeLineError = error.code;
@@ -141,6 +165,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       violations: result.violations,
       totalLateness: result.totalLateness,
       live,
+      ...(legs ? { legs } : {}),
       routeLine,
       ...(routeLineError ? { routeLineError } : {}),
     });

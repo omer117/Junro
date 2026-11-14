@@ -3,8 +3,9 @@ import { Router } from 'express';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
 import { loadDayProblem, remainingOf } from '../travel/day-problem.js';
+import { readCachedHybridTimes, legsOf, type HybridTimes } from '../travel/hybrid.js';
 import { readCachedTravelTimes } from '../travel/matrix.js';
-import { readRouteLine } from '../travel/route-line.js';
+import { readRouteLine, readTransitRouteLine } from '../travel/route-line.js';
 import { uuidParam } from './helpers.js';
 import { requireOwnedDay } from './ownership.js';
 
@@ -36,12 +37,24 @@ export function routeRouter(db: Db): Router {
     // (Stops that are done are not part of it.)
     if (problem.rows.length === 0 || savedIds.length !== solverStages.length) return noRoute();
 
-    const travelTime = await readCachedTravelTimes({
-      db,
-      dayId: day.id,
-      mode: day.travelMode,
-      points: [start, end, ...solverStages.map((s) => s.location)],
-    });
+    const points = [start, end, ...solverStages.map((s) => s.location)];
+    // A public transport day was planned for one moment; it is saved, so reading it later (when
+    // the clock has moved on) still finds the same times and lines.
+    const departureTime = day.travelMode === 'transit' ? day.transitDeparture : null;
+    let hybrid: HybridTimes | null = null;
+    let travelTime: SolveInput['travelTime'] | null;
+    if (day.travelMode === 'transit') {
+      if (!departureTime) return noRoute();
+      hybrid = await readCachedHybridTimes({ db, dayId: day.id, points, departureTime });
+      travelTime = hybrid?.travelTime ?? null;
+    } else {
+      travelTime = await readCachedTravelTimes({
+        db,
+        dayId: day.id,
+        mode: day.travelMode,
+        points,
+      });
+    }
     if (!travelTime) return noRoute();
 
     const input: SolveInput = {
@@ -54,12 +67,12 @@ export function routeRouter(db: Db): Router {
     const result = evaluateOrder(input, savedIds);
 
     const byId = new Map(solverStages.map((s) => [s.id, s]));
-    const routeLine = await readRouteLine({
-      db,
-      dayId: day.id,
-      mode: day.travelMode,
-      route: [start, ...result.order.map((id) => byId.get(id)!.location), end],
-    });
+    const route = [start, ...result.order.map((id) => byId.get(id)!.location), end];
+    const legs = hybrid ? legsOf(route, hybrid) : null;
+    const routeLine =
+      hybrid && departureTime
+        ? await readTransitRouteLine({ db, dayId: day.id, route, departureTime })
+        : await readRouteLine({ db, dayId: day.id, mode: day.travelMode, route });
 
     res.json({
       mode: 'saved',
@@ -69,6 +82,7 @@ export function routeRouter(db: Db): Router {
       violations: result.violations,
       totalLateness: result.totalLateness,
       live,
+      ...(legs ? { legs } : {}),
       routeLine,
     });
   });

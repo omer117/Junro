@@ -128,6 +128,8 @@ export const days = pgTable(
      */
     /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
     liveFrom: jsonb('live_from').$type<LiveFrom>(),
+    /** Public transport days: the moment (ISO timestamp) the saved route was planned for. */
+    transitDeparture: text('transit_departure'),
     routeLines: jsonb('route_lines').$type<RouteLine[]>().notNull().default([]),
   },
   (t) => [index('days_trip_idx').on(t.tripId)],

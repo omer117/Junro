@@ -44,6 +44,20 @@ function combine(walk: TravelTimeFn, transit: Map<string, number>): HybridTimes 
   };
 }
 
+/** One leg of a day: how it is travelled and how long it takes (rounded to whole minutes). */
+export interface Leg {
+  mode: LegMode;
+  minutes: number;
+}
+
+/** The legs of a route (start, stops in order, end): for each, on foot or by public transport. */
+export function legsOf(route: LatLng[], times: HybridTimes): Leg[] {
+  return route.slice(0, -1).map((from, i) => {
+    const to = route[i + 1]!;
+    return { mode: times.legMode(from, to), minutes: Math.round(times.travelTime(from, to, 0)) };
+  });
+}
+
 /**
  * Travel times for a day by public transport, where walking is used for what is close.
  *
