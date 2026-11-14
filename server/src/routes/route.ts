@@ -83,6 +83,7 @@ export function routeRouter(db: Db): Router {
       totalLateness: result.totalLateness,
       live,
       ...(legs ? { legs } : {}),
+      ...(hybrid ? { transitAvailable: hybrid.transitAvailable } : {}),
       routeLine,
     });
   });

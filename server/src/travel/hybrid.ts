@@ -30,6 +30,12 @@ export interface HybridTimes {
   travelTime: TravelTimeFn;
   /** What the shorter one is. */
   legMode: (from: LatLng, to: LatLng) => LegMode;
+  /**
+   * False when public transport was asked about and Google found no route anywhere. That is how
+   * Google answers in countries it has no public transport data for through the API (Japan and
+   * South Korea, for example), and the person should be told, not just shown walking.
+   */
+  transitAvailable: boolean;
 }
 
 /** Puts the two kinds of travel time together: for every pair, whichever is shorter. */
@@ -38,7 +44,9 @@ function combine(walk: TravelTimeFn, transit: Map<string, number>): HybridTimes 
     const seconds = transit.get(`${pointKey(from)}|${pointKey(to)}`);
     return seconds === undefined ? Infinity : seconds / 60;
   };
+  const found = [...transit.values()].filter(Number.isFinite).length;
   return {
+    transitAvailable: transit.size === 0 || found > 0,
     travelTime: (from, to, departure) => Math.min(walk(from, to, departure), ride(from, to)),
     legMode: (from, to) => (ride(from, to) < walk(from, to, 0) ? 'transit' : 'walk'),
   };

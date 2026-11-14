@@ -80,7 +80,7 @@ const options = [
 
 afterEach(() => vi.unstubAllGlobals());
 
-function setup() {
+function setup(saved: RouteResult = route) {
   const requests: Array<{ method: string; url: string; body: unknown }> = [];
   const stages = [stage('s1', 'Senso-ji', 0), stage('s2', 'Shibuya Station', 1)];
   vi.stubGlobal(
@@ -92,7 +92,7 @@ function setup() {
       if (url === '/api/days/d1' && method === 'GET') return json(200, day);
       if (url === '/api/days/d1' && method === 'PATCH') return json(200, day);
       if (url === '/api/days/d1/stages' && method === 'GET') return json(200, stages);
-      if (url === '/api/days/d1/route') return json(200, route);
+      if (url === '/api/days/d1/route') return json(200, saved);
       if (url.startsWith('/api/days/d1/legs/')) return json(200, { options });
       return json(404, { error: { code: 'not_found', message: 'x' } });
     }),
@@ -112,6 +112,29 @@ function setup() {
   );
   return { requests };
 }
+
+describe('a public transport day without public transport data', () => {
+  it('says why every leg is walked, instead of silently walking', async () => {
+    setup({
+      ...route,
+      transitAvailable: false,
+      legs: route.legs!.map((leg) => ({ ...leg, mode: 'walk' as const })),
+    });
+
+    const note = await screen.findByText(/public transport is not available/i);
+
+    expect(note).toHaveTextContent(/on foot/i);
+    expect(note).toHaveTextContent(/Japan/);
+  });
+
+  it('says nothing when public transport works', async () => {
+    setup(route);
+
+    await screen.findByRole('list', { name: 'Timeline' });
+
+    expect(screen.queryByText(/not available/i)).not.toBeInTheDocument();
+  });
+});
 
 describe('a public transport day', () => {
   it('shows every leg of the day: walked, or by public transport, and how long', async () => {

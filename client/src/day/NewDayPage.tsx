@@ -40,10 +40,11 @@ function PlaceField({
   }
   return (
     <div className="place-field">
-      <PlaceSearch label={question} placeholder="Hotel, station, address…" onPick={onChange} />
+      {/* The question shows above the box; screen readers get it as the box's own label. */}
       <span className="place-field__question" aria-hidden="true">
         {question}
       </span>
+      <PlaceSearch label={question} placeholder="Hotel, station, address…" onPick={onChange} />
     </div>
   );
 }

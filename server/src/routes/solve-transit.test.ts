@@ -153,4 +153,49 @@ describe('a public transport day', () => {
     expect(res.status).toBe(200);
     expect(res.body.legs).toBeUndefined();
   });
+
+  describe('where Google has no public transport (Japan, for example)', () => {
+    /** A Google that finds no public transport route at all, as it does in Tokyo. */
+    async function setupWithoutTransit() {
+      const s = await setup();
+      s.maps.routeMatrix.mockImplementation(async ({ origins, destinations, mode }) =>
+        mode === 'transit'
+          ? origins.map(() => destinations.map(() => Infinity))
+          : walk(origins, destinations),
+      );
+      return s;
+    }
+
+    it('walks every leg, and says that public transport is not available there', async () => {
+      const { addStage, solve } = await setupWithoutTransit();
+      await addStage(5);
+      await addStage(60);
+
+      const res = await solve();
+
+      expect(res.status).toBe(200);
+      expect(res.body.legs.every((leg: { mode: string }) => leg.mode === 'walk')).toBe(true);
+      expect(res.body.transitAvailable).toBe(false);
+    });
+
+    it('still says it when the saved route is read again', async () => {
+      const { agent, day, addStage, solve } = await setupWithoutTransit();
+      await addStage(60);
+      await solve();
+
+      const saved = await agent.get(`/days/${day.id}/route`);
+
+      expect(saved.body.transitAvailable).toBe(false);
+    });
+
+    it('says nothing is wrong when public transport works, or was never needed', async () => {
+      const working = await setup();
+      await working.addStage(60);
+      expect((await working.solve()).body.transitAvailable).toBe(true);
+
+      const close = await setup();
+      await close.addStage(3);
+      expect((await close.solve()).body.transitAvailable).toBe(true);
+    });
+  });
 });

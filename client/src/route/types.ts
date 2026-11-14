@@ -54,6 +54,11 @@ export interface RouteResult {
    * end), on foot or by public transport, and how long it takes.
    */
   legs?: Leg[];
+  /**
+   * Public transport days: false when Google has no public transport for these places (it has
+   * none through its API in Japan and South Korea), so every leg is on foot.
+   */
+  transitAvailable?: boolean;
   /** The encoded line to draw on the map, or null. */
   routeLine: string | null;
   /** Set when only the line failed: the order and times are still good. */
