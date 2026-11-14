@@ -16,6 +16,12 @@ import {
 } from 'drizzle-orm/pg-core';
 
 /** A stored route line, oldest first in a day's list (a jsonb object would not keep its order). */
+export interface LiveFrom {
+  lat: number;
+  lng: number;
+  time: number;
+}
+
 export interface RouteLine {
   fingerprint: string;
   line: string;
@@ -120,6 +126,8 @@ export const days = pgTable(
      * Route lines for the map, one per route (a fingerprint of the mode and the stops in order),
      * so the same route is never bought twice and going back to an earlier one is free.
      */
+    /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
+    liveFrom: jsonb('live_from').$type<LiveFrom>(),
     routeLines: jsonb('route_lines').$type<RouteLine[]>().notNull().default([]),
   },
   (t) => [index('days_trip_idx').on(t.tripId)],

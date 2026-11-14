@@ -12,12 +12,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { stages } from '../db/schema.js';
+import { days, stages } from '../db/schema.js';
 import { HttpError } from '../errors.js';
 import { GoogleNotConfiguredError } from '../google/errors.js';
 import type { MapsClient } from '../google/types.js';
 import type { RateLimiter } from '../rate-limit.js';
-import { loadDayProblem } from '../travel/day-problem.js';
+import { loadDayProblem, remainingOf } from '../travel/day-problem.js';
 import { loadTravelTimes } from '../travel/matrix.js';
 import { loadRouteLine } from '../travel/route-line.js';
 import { validateBody } from '../validate.js';
@@ -68,12 +68,12 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
 
     // Mid-day: stages that are done are not planned again. If the user says where they are and
     // what time it is, the route starts there and then; the end point stays the day's end point.
-    const doneIds = new Set(problem.rows.filter((r) => r.stage.done).map((r) => r.stage.id));
-    const solverStages = problem.solverStages.filter((s) => !doneIds.has(s.id));
-    const savedIds = problem.savedIds.filter((id) => !doneIds.has(id));
-    const { end } = problem;
-    const start = from ?? problem.start;
-    const startTime = now ?? day.startTime;
+    const live = from !== undefined && now !== undefined ? { ...from, time: now } : null;
+    const { start, end, startTime, solverStages, doneIds, savedIds } = remainingOf(
+      problem,
+      day,
+      live,
+    );
 
     // All travel times for the day, fetched (or read from the cache) before solving.
     const travelTime = await loadTravelTimes({
@@ -108,15 +108,13 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
 
     // Save the order, then draw the line. A failing line must not throw the order away.
     // Done stages keep the front of the order, in the order they had; the new order follows.
-    const doneInOrder = problem.rows
-      .filter((r) => doneIds.has(r.stage.id))
-      .sort((a, b) => (a.stage.position ?? Infinity) - (b.stage.position ?? Infinity))
-      .map((r) => r.stage.id);
-    const toSave = [...doneInOrder, ...result.order];
+    const toSave = [...doneIds, ...result.order];
     await db.transaction(async (tx) => {
       for (const [position, stageId] of toSave.entries()) {
         await tx.update(stages).set({ position }).where(eq(stages.id, stageId));
       }
+      // Remember where the day was replanned from (or forget it), so the saved route matches.
+      await tx.update(days).set({ liveFrom: live }).where(eq(days.id, day.id));
     });
 
     const byId = new Map(solverStages.map((s) => [s.id, s]));
@@ -142,6 +140,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       endArrival: result.endArrival,
       violations: result.violations,
       totalLateness: result.totalLateness,
+      live,
       routeLine,
       ...(routeLineError ? { routeLineError } : {}),
     });

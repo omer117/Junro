@@ -454,6 +454,29 @@ describe('POST /days/:id/solve in the middle of the day', () => {
     expect(maps.routeMatrix).not.toHaveBeenCalled();
   });
 
+  it('remembers where you were, so the saved route still starts from there', async () => {
+    const { agent, day, here, solveFromHere } = await midDay();
+
+    const solved = await solveFromHere(600);
+    const saved = await agent.get(`/days/${day.id}/route`);
+
+    expect(solved.body.live).toEqual({ ...here, time: 600 });
+    expect(saved.status).toBe(200);
+    expect(saved.body.live).toEqual({ ...here, time: 600 });
+    expect(saved.body.order).toEqual(solved.body.order);
+    expect(saved.body.endArrival).toBe(solved.body.endArrival);
+  });
+
+  it('forgets the location when the day is recalculated without one', async () => {
+    const { agent, day, solve, solveFromHere } = await midDay();
+    await solveFromHere(600);
+
+    const again = await solve('full');
+
+    expect(again.body.live).toBeNull();
+    expect((await agent.get(`/days/${day.id}/route`)).body.live).toBeNull();
+  });
+
   it('with every stop done, just heads for the end point', async () => {
     const { agent, b, c, solveFromHere } = await midDay();
     await agent.patch(`/stages/${b.id}`).send({ done: true });
