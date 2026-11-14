@@ -105,6 +105,21 @@ export function DayScreen() {
   // Numbers on the map mean a route exists: every stop has a place in it.
   const hasRoute = stages.length > 0 && stages.every((stage) => stage.position !== null);
 
+  const stopPlaces = useMemo(
+    () =>
+      new Map(
+        stages.map((stage) => [
+          stage.id,
+          {
+            lat: stage.place.lat,
+            lng: stage.place.lng,
+            googlePlaceId: stage.place.googlePlaceId,
+          },
+        ]),
+      ),
+    [stages],
+  );
+
   const stopNames = useMemo(
     () => new Map(stages.map((stage) => [stage.id, stage.place.name])),
     [stages],
@@ -275,8 +290,11 @@ export function DayScreen() {
                 startName: day.data.startName,
                 endName: day.data.endName,
                 returnsToStart: isSamePlace(day.data.start, day.data.end),
+                start: day.data.start,
+                end: day.data.end,
               }}
               stopNames={stopNames}
+              stopPlaces={stopPlaces}
               dayId={day.data.id}
               doneStops={doneStops}
               onToggleDone={(id, done) => updateStage.mutate({ id, done })}

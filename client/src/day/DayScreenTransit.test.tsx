@@ -113,6 +113,63 @@ function setup(saved: RouteResult = route) {
   return { requests };
 }
 
+const mapsLink = (name: string) => screen.getByRole('link', { name }) as HTMLAnchorElement;
+const modeOf = (link: HTMLAnchorElement) => new URL(link.href).searchParams.get('travelmode');
+
+describe('opening each leg in Google Maps', () => {
+  it('has a link on every leg, in the way that leg is travelled', async () => {
+    setup();
+
+    await screen.findByRole('list', { name: 'Timeline' });
+
+    const first = mapsLink('Open Hotel to Senso-ji in Google Maps');
+    const second = mapsLink('Open Senso-ji to Shibuya Station in Google Maps');
+    const last = mapsLink('Open Shibuya Station to Hotel in Google Maps');
+    expect([modeOf(first), modeOf(second), modeOf(last)]).toEqual([
+      'walking',
+      'transit',
+      'transit',
+    ]);
+  });
+
+  it('goes from the right place to the right place, naming the places Google knows', async () => {
+    setup();
+
+    await screen.findByRole('list', { name: 'Timeline' });
+
+    const url = new URL(mapsLink('Open Senso-ji to Shibuya Station in Google Maps').href);
+    expect(url.searchParams.get('origin')).toBe('35.7,139.8');
+    expect(url.searchParams.get('origin_place_id')).toBe('g-s1');
+    expect(url.searchParams.get('destination_place_id')).toBe('g-s2');
+    const fromHotel = new URL(mapsLink('Open Hotel to Senso-ji in Google Maps').href);
+    expect(fromHotel.searchParams.get('origin')).toBe('35.68,139.76');
+    expect(fromHotel.searchParams.has('origin_place_id')).toBe(false);
+  });
+
+  it('opens in a new tab, so the plan stays where it is', async () => {
+    setup();
+
+    await screen.findByRole('list', { name: 'Timeline' });
+
+    const link = mapsLink('Open Hotel to Senso-ji in Google Maps');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link.rel).toContain('noopener');
+  });
+
+  it('asks Google Maps for public transport on every leg where our own data has none', async () => {
+    setup({
+      ...route,
+      transitAvailable: false,
+      legs: route.legs!.map((leg) => ({ ...leg, mode: 'walk' as const })),
+    });
+
+    await screen.findByRole('list', { name: 'Timeline' });
+
+    expect(modeOf(mapsLink('Open Hotel to Senso-ji in Google Maps'))).toBe('transit');
+    expect(modeOf(mapsLink('Open Senso-ji to Shibuya Station in Google Maps'))).toBe('transit');
+  });
+});
+
 describe('a public transport day without public transport data', () => {
   it('says why every leg is walked, instead of silently walking', async () => {
     setup({

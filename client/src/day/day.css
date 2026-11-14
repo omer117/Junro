@@ -650,3 +650,15 @@
   color: var(--ink-muted);
   font-size: var(--text-sm);
 }
+
+.timeline__maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap);
+  padding: 0 var(--space-2);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: underline;
+}
