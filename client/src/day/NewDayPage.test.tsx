@@ -115,6 +115,19 @@ describe('NewDayPage', () => {
     });
   });
 
+  it('can plan the day by public transport', async () => {
+    const requests = setup();
+    await userEvent.type(screen.getByLabelText(/date/i), '2027-04-02');
+    await chooseStart();
+    await userEvent.click(screen.getByRole('radio', { name: 'Transit' }));
+    await userEvent.click(screen.getByRole('button', { name: /create day/i }));
+
+    await screen.findByText('The day screen');
+    expect(
+      requests.find((r) => r.method === 'POST' && r.url === '/api/trips/t1/days')!.body,
+    ).toMatchObject({ travelMode: 'transit' });
+  });
+
   it('asks for a date and a start before it creates anything', async () => {
     const requests = setup();
 

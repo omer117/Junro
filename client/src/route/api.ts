@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, api } from '../api/api';
-import type { RouteResult } from './types';
+import type { RouteResult, TransitOption } from './types';
 
 /**
  * The route a day has now, or null when it has none yet (or when it needs a new "Find my
@@ -48,5 +48,25 @@ export function useSolve(dayId: string) {
       void queryClient.invalidateQueries({ queryKey: ['days', dayId, 'stages'] });
       void queryClient.invalidateQueries({ queryKey: ['trips'] });
     },
+  });
+}
+
+/**
+ * The ways to make one leg of a public transport day. Asked only when the person opens them
+ * (`enabled`), and kept for the visit, so closing and opening again costs nothing. One Google
+ * call on the server.
+ */
+export function useLegOptions(dayId: string, index: number, at: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['days', dayId, 'legs', index, at],
+    queryFn: async () =>
+      (
+        await api<{ options: TransitOption[] }>(
+          `/days/${dayId}/legs/${index}/alternatives?at=${at}`,
+        )
+      ).options,
+    enabled,
+    retry: false,
+    staleTime: Infinity,
   });
 }

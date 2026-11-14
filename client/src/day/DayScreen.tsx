@@ -45,6 +45,7 @@ const NOTABLE_WAIT_MINUTES = 5;
 const MODES: Array<{ mode: TravelMode; label: string }> = [
   { mode: 'walking', label: 'Walking' },
   { mode: 'driving', label: 'Driving' },
+  { mode: 'transit', label: 'Transit' },
 ];
 
 /** Stops in route order; before a route exists, in the order they were added. */
@@ -266,15 +267,6 @@ export function DayScreen() {
               {label}
             </button>
           ))}
-          <button
-            type="button"
-            role="radio"
-            aria-checked="false"
-            className="mode-chip mode-chip--soon"
-            disabled
-          >
-            Transit · soon
-          </button>
         </div>
 
         {problem && <p role="alert">{problem}</p>}
@@ -291,6 +283,7 @@ export function DayScreen() {
                 returnsToStart: isSamePlace(day.data.start, day.data.end),
               }}
               stopNames={stopNames}
+              dayId={day.data.id}
               doneStops={doneStops}
               onToggleDone={(id, done) => updateStage.mutate({ id, done })}
             />

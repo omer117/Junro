@@ -582,3 +582,70 @@
     max-width: 34rem;
   }
 }
+
+/* The way between two places on a public transport day: walk, or ride, and other options */
+.timeline__leg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: calc(1.5rem + var(--space-3));
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.leg-ways {
+  flex-basis: 100%;
+}
+
+.leg-ways__toggle {
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  background: transparent;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.leg-ways__panel {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--ground);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+}
+
+.leg-ways__order {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.leg-ways__list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leg-ways__list li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.leg-ways__list span {
+  font-weight: 500;
+}
+
+.leg-ways__steps {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
