@@ -24,7 +24,18 @@ import { validateBody } from '../validate.js';
 import { uuidParam } from './helpers.js';
 import { requireOwnedDay } from './ownership.js';
 
-const solveBody = z.object({ mode: z.enum(['full', 'minimal']) });
+const latLng = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
+
+const solveBody = z
+  .object({
+    mode: z.enum(['full', 'minimal']),
+    /** Where the user is now, and the time (minutes since midnight). Both or neither. */
+    from: latLng.optional(),
+    now: z.number().int().min(0).max(2880).optional(),
+  })
+  .refine((body) => (body.from === undefined) === (body.now === undefined), {
+    message: 'Send both from and now, or neither',
+  });
 
 export interface SolveRouterDeps {
   db: Db;
@@ -46,14 +57,23 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
   router.post('/days/:dayId/solve', validateBody(solveBody), async (req, res) => {
     const userId = req.user!.id;
     const day = await requireOwnedDay(db, userId, uuidParam(req.params.dayId));
-    const { mode: requested } = req.body as z.infer<typeof solveBody>;
+    const { mode: requested, from, now } = req.body as z.infer<typeof solveBody>;
 
     if (!maps) throw new GoogleNotConfiguredError();
     if (!limiter.allow(userId)) {
       throw new HttpError(429, 'rate_limited', 'Too many route calculations. Wait a moment.');
     }
 
-    const { start, end, solverStages, savedIds } = await loadDayProblem(db, userId, day);
+    const problem = await loadDayProblem(db, userId, day);
+
+    // Mid-day: stages that are done are not planned again. If the user says where they are and
+    // what time it is, the route starts there and then; the end point stays the day's end point.
+    const doneIds = new Set(problem.rows.filter((r) => r.stage.done).map((r) => r.stage.id));
+    const solverStages = problem.solverStages.filter((s) => !doneIds.has(s.id));
+    const savedIds = problem.savedIds.filter((id) => !doneIds.has(id));
+    const { end } = problem;
+    const start = from ?? problem.start;
+    const startTime = now ?? day.startTime;
 
     // All travel times for the day, fetched (or read from the cache) before solving.
     const travelTime = await loadTravelTimes({
@@ -66,7 +86,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     const input: SolveInput = {
       start,
       end,
-      startTime: day.startTime,
+      startTime,
       stages: solverStages,
       travelTime,
     };
@@ -87,8 +107,14 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     }
 
     // Save the order, then draw the line. A failing line must not throw the order away.
+    // Done stages keep the front of the order, in the order they had; the new order follows.
+    const doneInOrder = problem.rows
+      .filter((r) => doneIds.has(r.stage.id))
+      .sort((a, b) => (a.stage.position ?? Infinity) - (b.stage.position ?? Infinity))
+      .map((r) => r.stage.id);
+    const toSave = [...doneInOrder, ...result.order];
     await db.transaction(async (tx) => {
-      for (const [position, stageId] of result.order.entries()) {
+      for (const [position, stageId] of toSave.entries()) {
         await tx.update(stages).set({ position }).where(eq(stages.id, stageId));
       }
     });
