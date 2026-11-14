@@ -9,6 +9,7 @@ export const CATEGORIES = [
   'park',
   'shop',
   'viewpoint',
+  'transit',
   'other',
 ] as const;
 
@@ -24,5 +25,6 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   park: 'Park',
   shop: 'Shop',
   viewpoint: 'Viewpoint',
+  transit: 'Transit stop',
   other: 'Other',
 };

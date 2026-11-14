@@ -32,6 +32,7 @@ export const CATEGORIES = [
   'park',
   'shop',
   'viewpoint',
+  'transit',
   'other',
 ] as const;
 export type Category = (typeof CATEGORIES)[number];

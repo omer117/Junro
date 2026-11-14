@@ -14,6 +14,8 @@ export const SYSTEM_MINIMUM_STAY: Record<Category, number> = {
   park: 20,
   shop: 15,
   viewpoint: 10,
+  /** A station or stop you only pass through. */
+  transit: 5,
   other: 10,
 };
 
