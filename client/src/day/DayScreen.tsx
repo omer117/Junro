@@ -6,6 +6,7 @@ import { CATEGORIES, CATEGORY_LABELS, type Category } from '../categories';
 import { CategoryIcon } from '../icons/CategoryIcon';
 import { formatClock, formatDayTitle } from '../lib/dates';
 import { LocationError, currentPosition } from '../lib/geolocation';
+import { RadioChips } from '../lib/RadioChips';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { isSamePlace } from '../map/endpoints';
 import type { MapMarker } from '../map/engine';
@@ -42,10 +43,10 @@ const ANIMATION_MS = 2000;
 /** A wait at a stop longer than this is flagged on the map, like a problem. */
 const NOTABLE_WAIT_MINUTES = 5;
 
-const MODES: Array<{ mode: TravelMode; label: string }> = [
-  { mode: 'walking', label: 'Walking' },
-  { mode: 'driving', label: 'Driving' },
-  { mode: 'transit', label: 'Transit' },
+const MODES: Array<{ value: TravelMode; label: string }> = [
+  { value: 'walking', label: 'Walking' },
+  { value: 'driving', label: 'Driving' },
+  { value: 'transit', label: 'Transit' },
 ];
 
 /** Stops in route order; before a route exists, in the order they were added. */
@@ -250,6 +251,7 @@ export function DayScreen() {
         <PlaceSearch
           label="Add a stop"
           placeholder="Add a stop — ramen, temple, bar…"
+          near={day.data.start}
           onPick={(place) => {
             addStage.reset();
             setPending(place);
@@ -268,23 +270,13 @@ export function DayScreen() {
           </span>
         </div>
 
-        <div role="radiogroup" aria-label="Travel mode" className="mode-chips">
-          {MODES.map(({ mode, label }) => (
-            <button
-              key={mode}
-              type="button"
-              role="radio"
-              aria-checked={day.data.travelMode === mode}
-              className="mode-chip"
-              disabled={updateDay.isPending}
-              onClick={() => {
-                if (day.data.travelMode !== mode) updateDay.mutate({ travelMode: mode });
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <RadioChips
+          label="Travel mode"
+          options={MODES}
+          value={day.data.travelMode}
+          disabled={updateDay.isPending}
+          onChange={(mode) => updateDay.mutate({ travelMode: mode })}
+        />
 
         {problem && <p role="alert">{problem}</p>}
 
