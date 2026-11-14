@@ -87,6 +87,12 @@ export function RouteSummary({
     <section className="route-summary" aria-label="Your route">
       <h2>{headline}</h2>
       <p className="route-summary__detail">{detail}</p>
+      {route.transitAvailable === false && (
+        <p role="status" className="route-summary__note">
+          Public transport is not available for these places, so every leg is on foot. Google does
+          not provide it in some countries, such as Japan and South Korea.
+        </p>
+      )}
       {route.routeLineError && (
         <p role="status" className="route-summary__note">
           The order is ready, but the line could not be drawn right now.

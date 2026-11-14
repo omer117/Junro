@@ -110,6 +110,7 @@
   bottom: 0;
   z-index: 1;
   display: grid;
+  align-content: start;
   gap: var(--space-4);
   max-height: 58dvh;
   overflow-y: auto;

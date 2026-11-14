@@ -166,6 +166,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       totalLateness: result.totalLateness,
       live,
       ...(legs ? { legs } : {}),
+      ...(hybrid ? { transitAvailable: hybrid.transitAvailable } : {}),
       routeLine,
       ...(routeLineError ? { routeLineError } : {}),
     });
