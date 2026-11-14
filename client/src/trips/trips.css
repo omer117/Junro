@@ -302,11 +302,52 @@
   opacity: 0.9;
 }
 
-.boarding-pass__plane {
+.boarding-pass__route .boarding-pass__flight {
+  position: relative;
+  display: block;
   flex: 1;
-  min-width: 1.5rem;
-  max-width: 3rem;
+  height: 1.75rem;
+  min-width: 2rem;
+}
+
+/* The dashed path from one airport to the other. */
+.boarding-pass__flight::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 2px dashed var(--accent);
+  opacity: 0.8;
+}
+
+/* The little plane flies along the dashed path. Its icon points up and to the right, so it is
+   turned a quarter to face along the line. */
+.boarding-pass__plane {
+  position: absolute;
+  top: 50%;
+  left: 0;
   color: var(--accent);
+  transform: translateY(-50%) rotate(45deg);
+  animation: boarding-pass-fly 5s ease-in-out infinite;
+}
+
+@keyframes boarding-pass-fly {
+  from {
+    left: 0;
+  }
+
+  to {
+    left: calc(100% - 22px);
+  }
+}
+
+/* For people who prefer less motion the plane just rests in the middle of the line. */
+@media (prefers-reduced-motion: reduce) {
+  .boarding-pass__plane {
+    left: calc(50% - 11px);
+    animation: none;
+  }
 }
 
 /* Choosing an airport */
