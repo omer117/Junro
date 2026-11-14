@@ -17,6 +17,8 @@ export interface MapMarker {
   category?: Category;
   /** Stops: the order in the route. Without it the marker shows the category icon instead. */
   number?: number;
+  /** Stops: already visited today. Shown greyed out. */
+  done?: boolean;
   /** Stops: this stop has a problem (opening hours). Shown with a warning colour. */
   warning?: boolean;
   /** Start and end: the text on the pin, for example "Start · 9:00". */

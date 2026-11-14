@@ -397,3 +397,95 @@ describe('POST /days/:id/solve', () => {
     });
   });
 });
+
+describe('POST /days/:id/solve in the middle of the day', () => {
+  /** Three stops (A at 1, B at 2, C at 4); A is already done and sits first in the saved order. */
+  async function midDay() {
+    const s = await setup();
+    const a = await s.addStage(1);
+    const b = await s.addStage(2);
+    const c = await s.addStage(4);
+    await s.agent.patch(`/stages/${a.id}`).send({ done: true }).expect(200);
+    await s.solve('full');
+    s.maps.routeMatrix.mockClear();
+    const here = { lat: 10, lng: 2 };
+    const solveFromHere = (now = 600) =>
+      s.agent.post(`/days/${s.day.id}/solve`).send({ mode: 'full', from: here, now });
+    return { ...s, a, b, c, here, solveFromHere };
+  }
+
+  it('leaves done stages out and starts from where you are, at the time it is now', async () => {
+    const { b, c, solveFromHere } = await midDay();
+
+    const res = await solveFromHere(600);
+
+    expect(res.status).toBe(200);
+    expect([...res.body.order].sort()).toEqual([b.id, c.id].sort());
+    // From lng 2 at 10:00 (one unit is one minute, a park takes 20): both orders end at 10:46.
+    expect(res.body.visits[0].arrival).toBeGreaterThanOrEqual(600);
+    expect(res.body.endArrival).toBe(646);
+  });
+
+  it('keeps the end point and the day itself as they were', async () => {
+    const { agent, day, solveFromHere } = await midDay();
+
+    await solveFromHere();
+
+    const saved = (await agent.get(`/trips/${day.tripId}/days`)).body[0];
+    expect(saved).toMatchObject({ startTime: 540 });
+    expect(saved.startName ?? null).toBeNull();
+  });
+
+  it('puts done stages first in the saved order, then the new order', async () => {
+    const { agent, day, a, solveFromHere } = await midDay();
+
+    const res = await solveFromHere();
+
+    const saved = (await idsAt(agent, day.id)).sort((x, y) => x.position! - y.position!);
+    expect(saved.map((s) => s.id)).toEqual([a.id, ...res.body.order]);
+  });
+
+  it('refuses a location without a time (and a time without a location) before asking Google', async () => {
+    const { agent, day, maps, here } = await midDay();
+
+    await agent.post(`/days/${day.id}/solve`).send({ mode: 'full', from: here }).expect(400);
+    await agent.post(`/days/${day.id}/solve`).send({ mode: 'full', now: 600 }).expect(400);
+
+    expect(maps.routeMatrix).not.toHaveBeenCalled();
+  });
+
+  it('remembers where you were, so the saved route still starts from there', async () => {
+    const { agent, day, here, solveFromHere } = await midDay();
+
+    const solved = await solveFromHere(600);
+    const saved = await agent.get(`/days/${day.id}/route`);
+
+    expect(solved.body.live).toEqual({ ...here, time: 600 });
+    expect(saved.status).toBe(200);
+    expect(saved.body.live).toEqual({ ...here, time: 600 });
+    expect(saved.body.order).toEqual(solved.body.order);
+    expect(saved.body.endArrival).toBe(solved.body.endArrival);
+  });
+
+  it('forgets the location when the day is recalculated without one', async () => {
+    const { agent, day, solve, solveFromHere } = await midDay();
+    await solveFromHere(600);
+
+    const again = await solve('full');
+
+    expect(again.body.live).toBeNull();
+    expect((await agent.get(`/days/${day.id}/route`)).body.live).toBeNull();
+  });
+
+  it('with every stop done, just heads for the end point', async () => {
+    const { agent, b, c, solveFromHere } = await midDay();
+    await agent.patch(`/stages/${b.id}`).send({ done: true });
+    await agent.patch(`/stages/${c.id}`).send({ done: true });
+
+    const res = await solveFromHere(600);
+
+    expect(res.status).toBe(200);
+    expect(res.body.order).toEqual([]);
+    expect(res.body.endArrival).toBe(602);
+  });
+});

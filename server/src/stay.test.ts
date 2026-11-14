@@ -10,6 +10,14 @@ describe('SYSTEM_MINIMUM_STAY', () => {
   });
 });
 
+describe('transit stop', () => {
+  it('is a quick pass-through: five minutes, and a smaller preference is raised to it', () => {
+    expect(SYSTEM_MINIMUM_STAY.transit).toBe(5);
+    expect(resolveStayMinutes({ category: 'transit' })).toBe(5);
+    expect(resolveStayMinutes({ category: 'transit', preference: 2 })).toBe(5);
+  });
+});
+
 describe('resolveStayMinutes', () => {
   const museumMinimum = SYSTEM_MINIMUM_STAY.museum;
 

@@ -45,7 +45,9 @@ export function BoardingPass({ trip, days, today }: { trip: Trip; days: Day[]; t
             <strong>{trip.origin.iata}</strong>
             <span>{trip.origin.city}</span>
           </div>
-          <Plane className="boarding-pass__plane" size={24} aria-hidden="true" />
+          <div className="boarding-pass__flight" aria-hidden="true">
+            <Plane className="boarding-pass__plane" size={22} />
+          </div>
           <div>
             <strong>{trip.destination.iata}</strong>
             <span>{trip.destination.city}</span>

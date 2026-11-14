@@ -50,5 +50,9 @@ export function createMarkerElement(marker: MapMarker): HTMLElement {
     element.setAttribute('aria-label', `${name}${attention}`);
   }
   if (marker.warning) element.classList.add('map-marker--warning');
+  if (marker.done) {
+    element.classList.add('map-marker--done');
+    element.setAttribute('aria-label', `${element.getAttribute('aria-label')}, done`);
+  }
   return element;
 }

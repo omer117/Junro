@@ -60,6 +60,12 @@
 }
 
 /* A stop with a problem. The colour is backed by the warning text and icon in the timeline. */
+.map-marker--done {
+  background: var(--line);
+  color: var(--ink-muted);
+  border-color: var(--line);
+}
+
 .map-marker--warning {
   background: var(--warning);
   color: var(--on-warning);

@@ -6,6 +6,7 @@ import {
   Mountain,
   ShoppingBag,
   Store,
+  TrainFront,
   TreePine,
   UtensilsCrossed,
   type LucideIcon,
@@ -43,6 +44,7 @@ const ICONS: Record<Category, LucideIcon> = {
   park: TreePine,
   shop: ShoppingBag,
   viewpoint: Mountain,
+  transit: TrainFront,
   other: MapPin,
 };
 

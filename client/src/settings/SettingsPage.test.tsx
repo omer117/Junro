@@ -19,6 +19,7 @@ const MINIMUMS: Record<string, number> = {
   park: 20,
   shop: 15,
   viewpoint: 10,
+  transit: 5,
   other: 10,
 };
 

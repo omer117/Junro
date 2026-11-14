@@ -2,7 +2,7 @@ import { evaluateOrder, type SolveInput } from '@junro/solver';
 import { Router } from 'express';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { loadDayProblem } from '../travel/day-problem.js';
+import { loadDayProblem, remainingOf } from '../travel/day-problem.js';
 import { readCachedTravelTimes } from '../travel/matrix.js';
 import { readRouteLine } from '../travel/route-line.js';
 import { uuidParam } from './helpers.js';
@@ -22,17 +22,19 @@ export function routeRouter(db: Db): Router {
 
   router.get('/days/:dayId/route', async (req, res) => {
     const day = await requireOwnedDay(db, req.user!.id, uuidParam(req.params.dayId));
-    const { start, end, solverStages, rows, savedIds } = await loadDayProblem(
-      db,
-      req.user!.id,
+    const problem = await loadDayProblem(db, req.user!.id, day);
+    const { start, end, startTime, solverStages, savedIds, live } = remainingOf(
+      problem,
       day,
+      day.liveFrom,
     );
     // "No route yet" is a normal answer, so it is 204 (No Content), not an error: browsers show a
     // 404 as a red error in the console every time the day screen asks.
     const noRoute = () => res.status(204).end();
 
     // A route exists only when every stop has its place in it.
-    if (solverStages.length === 0 || savedIds.length !== rows.length) return noRoute();
+    // (Stops that are done are not part of it.)
+    if (problem.rows.length === 0 || savedIds.length !== solverStages.length) return noRoute();
 
     const travelTime = await readCachedTravelTimes({
       db,
@@ -45,7 +47,7 @@ export function routeRouter(db: Db): Router {
     const input: SolveInput = {
       start,
       end,
-      startTime: day.startTime,
+      startTime,
       stages: solverStages,
       travelTime,
     };
@@ -66,6 +68,7 @@ export function routeRouter(db: Db): Router {
       endArrival: result.endArrival,
       violations: result.violations,
       totalLateness: result.totalLateness,
+      live,
       routeLine,
     });
   });

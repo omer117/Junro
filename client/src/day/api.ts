@@ -44,7 +44,7 @@ export function useAddStage(dayId: string) {
 export function useUpdateStage(dayId: string) {
   const refresh = useRefresh(dayId);
   return useMutation({
-    mutationFn: ({ id, ...change }: { id: string; category?: Category }) =>
+    mutationFn: ({ id, ...change }: { id: string; category?: Category; done?: boolean }) =>
       api<Stage>(`/stages/${id}`, { method: 'PATCH', body: change }),
     onSuccess: refresh,
   });

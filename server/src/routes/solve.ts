@@ -12,19 +12,30 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { stages } from '../db/schema.js';
+import { days, stages } from '../db/schema.js';
 import { HttpError } from '../errors.js';
 import { GoogleNotConfiguredError } from '../google/errors.js';
 import type { MapsClient } from '../google/types.js';
 import type { RateLimiter } from '../rate-limit.js';
-import { loadDayProblem } from '../travel/day-problem.js';
+import { loadDayProblem, remainingOf } from '../travel/day-problem.js';
 import { loadTravelTimes } from '../travel/matrix.js';
 import { loadRouteLine } from '../travel/route-line.js';
 import { validateBody } from '../validate.js';
 import { uuidParam } from './helpers.js';
 import { requireOwnedDay } from './ownership.js';
 
-const solveBody = z.object({ mode: z.enum(['full', 'minimal']) });
+const latLng = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
+
+const solveBody = z
+  .object({
+    mode: z.enum(['full', 'minimal']),
+    /** Where the user is now, and the time (minutes since midnight). Both or neither. */
+    from: latLng.optional(),
+    now: z.number().int().min(0).max(2880).optional(),
+  })
+  .refine((body) => (body.from === undefined) === (body.now === undefined), {
+    message: 'Send both from and now, or neither',
+  });
 
 export interface SolveRouterDeps {
   db: Db;
@@ -46,14 +57,23 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
   router.post('/days/:dayId/solve', validateBody(solveBody), async (req, res) => {
     const userId = req.user!.id;
     const day = await requireOwnedDay(db, userId, uuidParam(req.params.dayId));
-    const { mode: requested } = req.body as z.infer<typeof solveBody>;
+    const { mode: requested, from, now } = req.body as z.infer<typeof solveBody>;
 
     if (!maps) throw new GoogleNotConfiguredError();
     if (!limiter.allow(userId)) {
       throw new HttpError(429, 'rate_limited', 'Too many route calculations. Wait a moment.');
     }
 
-    const { start, end, solverStages, savedIds } = await loadDayProblem(db, userId, day);
+    const problem = await loadDayProblem(db, userId, day);
+
+    // Mid-day: stages that are done are not planned again. If the user says where they are and
+    // what time it is, the route starts there and then; the end point stays the day's end point.
+    const live = from !== undefined && now !== undefined ? { ...from, time: now } : null;
+    const { start, end, startTime, solverStages, doneIds, savedIds } = remainingOf(
+      problem,
+      day,
+      live,
+    );
 
     // All travel times for the day, fetched (or read from the cache) before solving.
     const travelTime = await loadTravelTimes({
@@ -66,7 +86,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     const input: SolveInput = {
       start,
       end,
-      startTime: day.startTime,
+      startTime,
       stages: solverStages,
       travelTime,
     };
@@ -87,10 +107,14 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     }
 
     // Save the order, then draw the line. A failing line must not throw the order away.
+    // Done stages keep the front of the order, in the order they had; the new order follows.
+    const toSave = [...doneIds, ...result.order];
     await db.transaction(async (tx) => {
-      for (const [position, stageId] of result.order.entries()) {
+      for (const [position, stageId] of toSave.entries()) {
         await tx.update(stages).set({ position }).where(eq(stages.id, stageId));
       }
+      // Remember where the day was replanned from (or forget it), so the saved route matches.
+      await tx.update(days).set({ liveFrom: live }).where(eq(days.id, day.id));
     });
 
     const byId = new Map(solverStages.map((s) => [s.id, s]));
@@ -116,6 +140,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       endArrival: result.endArrival,
       violations: result.violations,
       totalLateness: result.totalLateness,
+      live,
       routeLine,
       ...(routeLineError ? { routeLineError } : {}),
     });

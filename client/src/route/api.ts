@@ -24,12 +24,24 @@ export function useRoute(dayId: string | undefined) {
   });
 }
 
+/**
+ * A mode on its own, or a mode with where the person is and the time (minutes since midnight)
+ * to replan the rest of the day from there.
+ */
+export type SolveRequest =
+  | 'full'
+  | 'minimal'
+  | { mode: 'full' | 'minimal'; from: { lat: number; lng: number }; now: number };
+
 /** "Find my route": the server picks the best order and draws the line. */
 export function useSolve(dayId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (mode: 'full' | 'minimal') =>
-      api<RouteResult>(`/days/${dayId}/solve`, { method: 'POST', body: { mode } }),
+    mutationFn: (request: SolveRequest) =>
+      api<RouteResult>(`/days/${dayId}/solve`, {
+        method: 'POST',
+        body: typeof request === 'string' ? { mode: request } : request,
+      }),
     onSuccess: (route) => {
       queryClient.setQueryData(['days', dayId, 'route'], route);
       // The stops now have their place in the route, and the day cards may have changed.
