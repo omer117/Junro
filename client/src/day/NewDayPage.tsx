@@ -88,6 +88,8 @@ export function NewDayPage() {
         end: { lat: finish.lat, lng: finish.lng },
         startName: start.name,
         endName: finish.name,
+        startPlaceId: start.googlePlaceId,
+        endPlaceId: finish.googlePlaceId,
         startTime: minutesOf(time),
         travelMode: mode,
       },

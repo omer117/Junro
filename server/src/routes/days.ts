@@ -12,12 +12,17 @@ const point = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-
 
 const pointName = z.string().trim().min(1).max(100);
 
+/** Real Google place ids look like "ChIJ...": letters, digits, - and _. */
+const placeId = z.string().regex(/^[A-Za-z0-9_-]{10,200}$/);
+
 const dayBody = z.object({
   date: z.iso.date(),
   start: point,
   end: point,
   startName: pointName.optional(),
   endName: pointName.optional(),
+  startPlaceId: placeId.optional(),
+  endPlaceId: placeId.optional(),
   /** Minutes since midnight. */
   startTime: z.number().int().min(0).max(1439),
   travelMode: z.enum(TRAVEL_MODES),
@@ -25,7 +30,7 @@ const dayBody = z.object({
 
 /** A change can also clear a name (null). */
 const dayPatch = dayBody
-  .omit({ startName: true, endName: true })
+  .omit({ startName: true, endName: true, startPlaceId: true, endPlaceId: true })
   .partial()
   .extend({ startName: pointName.nullable().optional(), endName: pointName.nullable().optional() });
 
@@ -41,6 +46,8 @@ export function toDay(row: DayRow, stageCount: number) {
     end: { lat: row.endLat, lng: row.endLng },
     startName: row.startName,
     endName: row.endName,
+    startPlaceId: row.startPlaceId,
+    endPlaceId: row.endPlaceId,
     startTime: row.startTime,
     travelMode: row.travelMode,
     stageCount,
@@ -86,6 +93,8 @@ export function daysRouter(db: Db): Router {
         endLng: body.end.lng,
         startName: body.startName ?? null,
         endName: body.endName ?? null,
+        startPlaceId: body.startPlaceId ?? null,
+        endPlaceId: body.endPlaceId ?? null,
         startTime: body.startTime,
         travelMode: body.travelMode,
       })

@@ -20,6 +20,8 @@ const day: DayDetail = {
   end: { lat: 35.68, lng: 139.76 },
   startName: 'Hotel',
   endName: 'Hotel',
+  startPlaceId: 'ChIJ-the-hotel',
+  endPlaceId: 'ChIJ-the-hotel',
   startTime: 540,
   travelMode: 'transit',
   stageCount: 2,
@@ -143,7 +145,7 @@ describe('opening each leg in Google Maps', () => {
     expect(url.searchParams.get('destination_place_id')).toBe('g-s2');
     const fromHotel = new URL(mapsLink('Open Hotel to Senso-ji in Google Maps').href);
     expect(fromHotel.searchParams.get('origin')).toBe('35.68,139.76');
-    expect(fromHotel.searchParams.has('origin_place_id')).toBe(false);
+    expect(fromHotel.searchParams.get('origin_place_id')).toBe('ChIJ-the-hotel');
   });
 
   it('opens in a new tab, so the plan stays where it is', async () => {

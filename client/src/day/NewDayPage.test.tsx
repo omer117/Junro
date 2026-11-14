@@ -83,6 +83,8 @@ describe('NewDayPage', () => {
       end: { lat: 35.695, lng: 139.702 },
       startName: 'Hotel Gracery',
       endName: 'Hotel Gracery',
+      startPlaceId: 'ChIJ-hotel-000001',
+      endPlaceId: 'ChIJ-hotel-000001',
       startTime: 540,
       travelMode: 'walking',
     });
@@ -110,6 +112,8 @@ describe('NewDayPage', () => {
       end: { lat: 35.713, lng: 139.777 },
       startName: 'Hotel Gracery',
       endName: 'Ueno Station',
+      startPlaceId: 'ChIJ-hotel-000001',
+      endPlaceId: 'ChIJ-station-0001',
       startTime: 630,
       travelMode: 'driving',
     });

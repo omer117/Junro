@@ -207,7 +207,8 @@ Limits worth knowing:
   the live server: London and Tel Aviv work; Tokyo and Seoul answer "no route" for every pair, so a
   transit day there is walked, and the screen says so. Public transport in Japan and South Korea
   would need another data source. Every leg of a transit day has an "Open in Google Maps" link
-  (a plain link the person presses, no API call), which shows the real lines and times there.
+  (a plain link the person presses, no API call), which shows the real lines and times there (for the present moment: the link format has no
+  place for a departure time).
 - Google answers public transport matrices for at most 100 elements per request, so they are
   requested per origin. A public transport route cannot have stops in between, so the map line is
   drawn leg by leg and joined (each leg is stored and reused).

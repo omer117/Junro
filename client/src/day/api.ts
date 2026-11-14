@@ -73,6 +73,8 @@ export interface NewDay {
   end: { lat: number; lng: number };
   startName: string;
   endName: string;
+  startPlaceId: string;
+  endPlaceId: string;
   /** Minutes since midnight. */
   startTime: number;
   travelMode: TravelMode;

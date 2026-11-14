@@ -5,6 +5,9 @@ import type { Day } from '../trips/types';
 export interface DayDetail extends Day {
   startName: string | null;
   endName: string | null;
+  /** Google's ids of the start and end places, when they were chosen from a search. */
+  startPlaceId?: string | null;
+  endPlaceId?: string | null;
 }
 
 export interface Stage {

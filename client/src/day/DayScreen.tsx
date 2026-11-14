@@ -291,8 +291,14 @@ export function DayScreen() {
                 startName: day.data.startName,
                 endName: day.data.endName,
                 returnsToStart: isSamePlace(day.data.start, day.data.end),
-                start: day.data.start,
-                end: day.data.end,
+                start: {
+                  ...day.data.start,
+                  ...(day.data.startPlaceId ? { googlePlaceId: day.data.startPlaceId } : {}),
+                },
+                end: {
+                  ...day.data.end,
+                  ...(day.data.endPlaceId ? { googlePlaceId: day.data.endPlaceId } : {}),
+                },
               }}
               stopNames={stopNames}
               stopPlaces={stopPlaces}

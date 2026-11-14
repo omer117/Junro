@@ -85,6 +85,13 @@
       "when": 1794645435326,
       "tag": "0011_transit_departure",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794676330918,
+      "tag": "0012_day_place_ids",
+      "breakpoints": true
     }
   ]
 }
