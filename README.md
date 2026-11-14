@@ -11,8 +11,7 @@ tells you which way to walk next.
 
 ## Live demo
 
-**https://junro.vercel.app** (sign in with Google). The first request after a quiet period may be
-slow while the server wakes up its database connection.
+**https://junro.vercel.app** (sign in with Google).
 
 ## What it does
 
@@ -58,8 +57,8 @@ no known fast exact solution, but a day has few stops (at most 15), so Junro sol
 - **Held-Karp dynamic programming** over subsets. A state is "which stops are visited, and which
   was last". For each state the solver keeps the best ways to have got there, and extends them
   one stop at a time. Time `O(2^n * n^2)`, memory `O(2^n * n)` (times the number of labels
-  below). For 15 stops that is a few hundred million steps at most, and typical days take
-  milliseconds.
+  below). For 15 stops that is about seven million steps per label, and a test keeps
+  the worst case under a second.
 - **Opening hours.** Arriving before a place opens means waiting; leaving after it closes means
   lateness. The best order has the least total lateness first (zero when everything fits), then
   the earliest return.
