@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { formatDuration } from '../lib/duration';
+import { RadioChips } from '../lib/RadioChips';
 import { useLegOptions } from './api';
 import type { TransitOption, TransitStep } from './types';
 
@@ -77,20 +78,13 @@ export function LegWays({
           {query.data && query.data.length === 0 && <p>No other ways found for this leg.</p>}
           {sorted.length > 0 && (
             <>
-              <div role="radiogroup" aria-label="Order by" className="leg-ways__order">
-                {PREFERENCES.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={preference === value}
-                    className="mode-chip"
-                    onClick={() => setPreference(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <RadioChips
+                label="Order by"
+                options={PREFERENCES}
+                value={preference}
+                onChange={setPreference}
+                className="leg-ways__order"
+              />
               <ol aria-label="Ways to get there" className="leg-ways__list">
                 {sorted.map((option, i) => (
                   <li key={i}>
