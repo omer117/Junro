@@ -163,6 +163,38 @@ describe('a day in progress', () => {
     expect(within(timeline).getByText('10:30')).toBeInTheDocument();
   });
 
+  it('lists the stops that are done after the start of the day, in the order they happened', async () => {
+    setup();
+
+    const rows = within(await screen.findByRole('list', { name: 'Timeline' })).getAllByRole(
+      'listitem',
+    );
+
+    expect(rows[0]).toHaveTextContent('Hotel');
+    expect(rows[1]).toHaveTextContent('Senso-ji');
+    expect(rows[1]).toHaveTextContent(/done/i);
+  });
+
+  it('puts the done stops before "Your location" when the day was replanned from there', async () => {
+    setup(route({ live: { lat: 35.7, lng: 139.8, time: 630 } }));
+
+    const rows = within(await screen.findByRole('list', { name: 'Timeline' })).getAllByRole(
+      'listitem',
+    );
+
+    expect(rows[0]).toHaveTextContent('Senso-ji');
+    expect(rows[1]).toHaveTextContent('Your location');
+  });
+
+  it('says to answer the browser question when the location does not come in time', async () => {
+    stubPosition((_ok, fail) => fail({ code: 3 } as GeolocationPositionError));
+    setup();
+
+    await userEvent.click(await screen.findByRole('button', { name: /recalculate from here/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/answer the question|allow/i);
+  });
+
   it('explains how to allow it when location is refused, and asks the server nothing', async () => {
     stubPosition((_ok, fail) => fail({ code: 1 } as GeolocationPositionError));
     const { requests } = setup();

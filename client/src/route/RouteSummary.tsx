@@ -61,6 +61,28 @@ export function RouteSummary({
     );
   };
 
+  // Stops already visited. They happened before the plan below: after the start of the day, or,
+  // when the day was replanned from where you are, before "Your location".
+  const doneRows = doneStops.map((stop) => (
+    <li key={stop.id} className="timeline__row timeline__row--done">
+      <span className="timeline__dot timeline__dot--done" aria-hidden="true">
+        <Check size={12} />
+      </span>
+      <span className="timeline__name">{stop.name}</span>
+      <span className="timeline__time">Done</span>
+      {onToggleDone && (
+        <button
+          type="button"
+          className="timeline__toggle"
+          aria-label={`Undo done for ${stop.name}`}
+          onClick={() => onToggleDone(stop.id, false)}
+        >
+          Undo
+        </button>
+      )}
+    </li>
+  ));
+
   return (
     <section className="route-summary" aria-label="Your route">
       <h2>{headline}</h2>
@@ -72,30 +94,13 @@ export function RouteSummary({
       )}
 
       <ol aria-label="Timeline" className="timeline">
-        {doneStops.map((stop) => (
-          <li key={stop.id} className="timeline__row timeline__row--done">
-            <span className="timeline__dot timeline__dot--done" aria-hidden="true">
-              <Check size={12} />
-            </span>
-            <span className="timeline__name">{stop.name}</span>
-            <span className="timeline__time">Done</span>
-            {onToggleDone && (
-              <button
-                type="button"
-                className="timeline__toggle"
-                aria-label={`Undo done for ${stop.name}`}
-                onClick={() => onToggleDone(stop.id, false)}
-              >
-                Undo
-              </button>
-            )}
-          </li>
-        ))}
+        {route.live && doneRows}
         <li className="timeline__row timeline__row--end">
           <span className="timeline__dot timeline__dot--hollow" aria-hidden="true" />
           <span className="timeline__name">{startName}</span>
           <span className="timeline__time">{formatClock(startTime)}</span>
         </li>
+        {!route.live && doneRows}
         {legAfter(0)}
         {route.visits.map((visit, visitIndex) => {
           const notes = stopNotes(visit, route.violations);

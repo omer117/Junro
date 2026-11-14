@@ -28,6 +28,12 @@ describe('currentPosition', () => {
     await expect(currentPosition()).rejects.toMatchObject({ reason: 'unavailable' });
   });
 
+  it('says "timeout" when nothing came back in time (for example the permission question was not answered)', async () => {
+    stubGeolocation((_ok, fail) => fail({ code: 3 } as GeolocationPositionError));
+
+    await expect(currentPosition()).rejects.toMatchObject({ reason: 'timeout' });
+  });
+
   it('says "unsupported" when the browser has no geolocation', async () => {
     vi.stubGlobal('navigator', {});
 

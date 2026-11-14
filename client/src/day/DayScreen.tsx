@@ -189,9 +189,11 @@ export function DayScreen() {
       setLocationProblem(
         error instanceof LocationError && error.reason === 'denied'
           ? 'Allow location for this site in your browser (the icon next to the address), then try again.'
-          : error instanceof LocationError && error.reason === 'unsupported'
-            ? 'This browser cannot share your location.'
-            : 'Could not find where you are. Move to an open spot and try again.',
+          : error instanceof LocationError && error.reason === 'timeout'
+            ? 'No location yet. If your browser is asking for permission, allow it, then try again.'
+            : error instanceof LocationError && error.reason === 'unsupported'
+              ? 'This browser cannot share your location.'
+              : 'Could not find where you are. Move to an open spot and try again.',
       );
     } finally {
       setLocating(false);
