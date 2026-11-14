@@ -1,0 +1,9 @@
+{
+  "installCommand": "cd .. && npm ci",
+  "buildCommand": "cd .. && npm run build -w @junro/client",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "http://82.70.209.228:3000/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

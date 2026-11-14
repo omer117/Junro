@@ -1,0 +1,18 @@
+# systemd unit for the Junro server on the Oracle VM. Installed to /etc/systemd/system/.
+# Settings (secrets included) are read from /etc/junro.env, which is never in the repo.
+[Unit]
+Description=Junro server
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Junro
+EnvironmentFile=/etc/junro.env
+ExecStart=/usr/bin/npm run start -w @junro/server
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

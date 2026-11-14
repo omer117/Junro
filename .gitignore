@@ -30,3 +30,7 @@ Thumbs.db
 
 # Local Claude Code instructions (kept out of the repo)
 CLAUDE.md
+
+# Private keys (SSH etc.) must never be committed
+*.key
+*.pem
