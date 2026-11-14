@@ -52,6 +52,16 @@ describe('travelMinutes', () => {
   });
 });
 
+describe('stopNotes', () => {
+  it('says how late in whole minutes, not with a long fraction', () => {
+    const notes = stopNotes(visit('a', 550, 570), [
+      { stageId: 'a', kind: 'closed', minutesLate: 1177.9666666666667 },
+    ]);
+
+    expect(notes).toEqual(['It closes before you are done: about 1178 min over.']);
+  });
+});
+
 describe('describeRoute', () => {
   const day = (over = {}) => ({
     startTime: 540,

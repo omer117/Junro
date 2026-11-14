@@ -56,7 +56,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function setup(saved: RouteResult = route()) {
+function setup(saved: RouteResult = route(), today = new Date(2027, 3, 1, 10, 30)) {
+  // The day is dated 2027-04-01. Only the clock is faked, so timers and promises run normally.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(today);
   const requests: Array<{ method: string; url: string; body: unknown }> = [];
   const stages = [
     stage('s1', 'Senso-ji', 0, true),
@@ -136,8 +139,6 @@ describe('a day in progress', () => {
   });
 
   it('says what it does with your location before using it, and then replans from there', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date(2027, 3, 1, 10, 30));
     stubPosition((ok) =>
       ok({ coords: { latitude: 35.7, longitude: 139.8 } } as GeolocationPosition),
     );
@@ -184,6 +185,17 @@ describe('a day in progress', () => {
 
     expect(rows[0]).toHaveTextContent('Senso-ji');
     expect(rows[1]).toHaveTextContent('Your location');
+  });
+
+  it('offers to replan from where you are only on the day itself', async () => {
+    setup(route(), new Date(2027, 2, 20, 10, 30)); // twelve days before the day
+
+    await screen.findByRole('list', { name: 'Timeline' });
+
+    expect(
+      screen.queryByRole('button', { name: /recalculate from here/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/uses your location once/i)).not.toBeInTheDocument();
   });
 
   it('says to answer the browser question when the location does not come in time', async () => {

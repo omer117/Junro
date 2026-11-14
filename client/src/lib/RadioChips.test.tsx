@@ -29,6 +29,29 @@ function Harness({ onChange = () => {} }: { onChange?: (value: string) => void }
   );
 }
 
+describe('RadioChips with manual activation', () => {
+  it('moves focus with the arrow keys but only chooses on Space or Enter (for choices that cost something)', async () => {
+    const onChange = vi.fn();
+    render(
+      <RadioChips
+        label="Travel mode"
+        options={OPTIONS}
+        value="a"
+        onChange={onChange}
+        activation="manual"
+      />,
+    );
+    screen.getByRole('radio', { name: 'Walking' }).focus();
+
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: 'Driving' })).toHaveFocus();
+    expect(onChange).not.toHaveBeenCalled();
+
+    await userEvent.keyboard('{Enter}');
+    expect(onChange).toHaveBeenCalledWith('b');
+  });
+});
+
 describe('RadioChips', () => {
   it('is a radio group whose chosen option is checked', () => {
     render(<Harness />);

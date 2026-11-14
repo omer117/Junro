@@ -44,7 +44,9 @@ export function stopNotes(visit: Visit, violations: Violation[]): string[] {
   for (const violation of violations) {
     if (violation.stageId !== visit.stageId) continue;
     if (violation.kind === 'closed') {
-      notes.push(`It closes before you are done: about ${violation.minutesLate} min over.`);
+      notes.push(
+        `It closes before you are done: about ${Math.round(violation.minutesLate)} min over.`,
+      );
     } else if (violation.kind === 'closed_all_day') {
       notes.push('Closed on this day.');
     } else {

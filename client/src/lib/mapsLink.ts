@@ -16,10 +16,12 @@ export function googleMapsDirectionsUrl(args: {
   mode: 'walking' | 'driving' | 'transit';
 }): string {
   const { from, to, mode } = args;
+  // Six decimals are about 10 cm; it also drops floating point noise such as 139.81070040000003.
+  const coordinate = (n: number) => String(Number(n.toFixed(6)));
   const params = new URLSearchParams({
     api: '1',
-    origin: `${from.lat},${from.lng}`,
-    destination: `${to.lat},${to.lng}`,
+    origin: `${coordinate(from.lat)},${coordinate(from.lng)}`,
+    destination: `${coordinate(to.lat)},${coordinate(to.lng)}`,
     travelmode: mode,
   });
   if (from.googlePlaceId) params.set('origin_place_id', from.googlePlaceId);

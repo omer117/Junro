@@ -8,7 +8,8 @@ export interface ChipOption<T extends string> {
 /**
  * A group of pill buttons of which exactly one is chosen, built the way a radio group should
  * work with the keyboard: the group is ONE stop for the Tab key (the chosen option), and the arrow
- * keys move to the next or previous option and choose it, wrapping around at the ends.
+ * keys move to the next or previous option (and choose it, unless activation is 'manual'),
+ * wrapping around at the ends.
  * Screen readers hear a radio group with its label, and which option is checked.
  */
 export function RadioChips<T extends string>({
@@ -19,6 +20,7 @@ export function RadioChips<T extends string>({
   disabled = false,
   className = 'mode-chips',
   chipClassName = 'mode-chip',
+  activation = 'automatic',
 }: {
   label: string;
   options: readonly ChipOption<T>[];
@@ -27,6 +29,12 @@ export function RadioChips<T extends string>({
   disabled?: boolean;
   className?: string;
   chipClassName?: string;
+  /**
+   * 'automatic': the arrow keys also choose (the usual radio behaviour). 'manual': they only move
+   * the focus, and Space or Enter chooses. Use manual when a choice costs something (a new
+   * calculation), so moving along the options does not trigger each one.
+   */
+  activation?: 'automatic' | 'manual';
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -41,7 +49,7 @@ export function RadioChips<T extends string>({
     event.preventDefault();
     const next = (from + step + options.length) % options.length;
     refs.current[next]?.focus();
-    onChange(options[next]!.value);
+    if (activation === 'automatic') onChange(options[next]!.value);
   };
 
   return (

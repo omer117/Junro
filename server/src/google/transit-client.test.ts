@@ -139,7 +139,57 @@ describe('transit requests to Google', () => {
       travelMode: 'TRANSIT',
       departureTime,
       computeAlternativeRoutes: true,
+      languageCode: 'en', // line names in English, not the local script
     });
+  });
+});
+
+describe('transit alternatives, tidied for people', () => {
+  const route = (steps: unknown[], duration = '1500s') => ({
+    duration,
+    legs: [{ steps }],
+  });
+  const walkStep = (seconds: number) => ({ travelMode: 'WALK', staticDuration: `${seconds}s` });
+  const rideStep = (seconds: number, name: string) => ({
+    travelMode: 'TRANSIT',
+    staticDuration: `${seconds}s`,
+    transitDetails: { stopCount: 5, transitLine: { name, vehicle: { type: 'BUS' } } },
+  });
+
+  it('merges walking steps that follow each other into one, and drops zero-minute steps', async () => {
+    const fetch = fakeFetch({
+      routes: [
+        route([
+          walkStep(0),
+          walkStep(120),
+          walkStep(60),
+          rideStep(900, 'Line 5'),
+          walkStep(180),
+          walkStep(120),
+        ]),
+      ],
+    });
+    const client = createHttpMapsClient({ apiKey: 'KEY', fetch });
+
+    const [option] = await client.transitAlternatives({ origin: A, destination: B, departureTime });
+
+    expect(option!.steps).toEqual([
+      { kind: 'walk', minutes: 3 },
+      { kind: 'transit', minutes: 15, line: 'Line 5', vehicle: 'BUS', stops: 5 },
+      { kind: 'walk', minutes: 5 },
+    ]);
+    expect(option!.walkMinutes).toBe(8);
+  });
+
+  it('shows an option once, even when Google sends it twice', async () => {
+    const same = route([walkStep(120), rideStep(900, 'Line 5'), walkStep(120)], '1140s');
+    const other = route([walkStep(600), rideStep(900, 'Line 9')], '1500s');
+    const fetch = fakeFetch({ routes: [same, other, same] });
+    const client = createHttpMapsClient({ apiKey: 'KEY', fetch });
+
+    const options = await client.transitAlternatives({ origin: A, destination: B, departureTime });
+
+    expect(options.map((o) => o.minutes)).toEqual([19, 25]);
   });
 });
 
