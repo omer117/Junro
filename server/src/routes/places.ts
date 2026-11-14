@@ -10,10 +10,17 @@ import type { MapsClient, PlaceSuggestion } from '../google/types.js';
 import type { RateLimiter } from '../rate-limit.js';
 import { validateBody } from '../validate.js';
 
-const searchQuery = z.object({
-  q: z.string().trim().min(3).max(100),
-  sessionToken: z.string().min(8).max(100),
-});
+const searchQuery = z
+  .object({
+    q: z.string().trim().min(3).max(100),
+    sessionToken: z.string().min(8).max(100),
+    /** Where the person is looking (the day's start): results around it come first. Both or neither. */
+    lat: z.coerce.number().min(-90).max(90).optional(),
+    lng: z.coerce.number().min(-180).max(180).optional(),
+  })
+  .refine((query) => (query.lat === undefined) === (query.lng === undefined), {
+    message: 'Send both lat and lng, or neither',
+  });
 
 /** Real Google place ids look like "ChIJ...": letters, digits, - and _. Anything else is refused up front. */
 const createBody = z.object({
@@ -68,9 +75,12 @@ export function placesRouter({
         parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
       );
     }
-    const { q, sessionToken } = parsed.data;
+    const { q, sessionToken, lat, lng } = parsed.data;
+    const near = lat !== undefined && lng !== undefined ? { lat, lng } : undefined;
 
-    const key = q.toLowerCase().replace(/\s+/g, ' ');
+    // Results depend on the text and the area (about 11 km squares), so the cache keeps both.
+    const area = near ? `${near.lat.toFixed(1)},${near.lng.toFixed(1)}` : 'anywhere';
+    const key = `${q.toLowerCase().replace(/\s+/g, ' ')}|${area}`;
     const hit = cache.get(key);
     if (hit && now() - hit.at < CACHE_TTL_MS) {
       res.json(hit.value);
@@ -81,7 +91,7 @@ export function placesRouter({
       throw new HttpError(429, 'rate_limited', 'Too many searches. Wait a moment and try again.');
     }
 
-    const value = await maps.autocomplete({ query: q, sessionToken });
+    const value = await maps.autocomplete({ query: q, sessionToken, ...(near ? { near } : {}) });
 
     if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value!);
     cache.set(key, { at: now(), value });
