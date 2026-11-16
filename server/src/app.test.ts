@@ -15,7 +15,23 @@ describe('app', () => {
     const res = await request(createTestApp(db)).get('/health');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok' });
+    expect(res.body).toEqual({ status: 'ok', redis: 'off' });
+  });
+
+  it('GET /health says whether Redis is up or down, and stays 200 when it is down', async () => {
+    const handle = (isReady: boolean) => ({
+      isReady,
+      get: async () => null,
+      set: async () => undefined,
+      incrementWindow: async () => 1,
+    });
+
+    const up = await request(createTestApp(db, { redis: handle(true) })).get('/health');
+    const down = await request(createTestApp(db, { redis: handle(false) })).get('/health');
+
+    expect(up.body).toEqual({ status: 'ok', redis: 'up' });
+    expect(down.status).toBe(200);
+    expect(down.body).toEqual({ status: 'ok', redis: 'down' });
   });
 
   it('unknown routes get a JSON 404', async () => {

@@ -16,6 +16,7 @@ import { legsRouter } from './routes/legs.js';
 import { routeRouter } from './routes/route.js';
 import { solveRouter } from './routes/solve.js';
 import { stagesRouter } from './routes/stages.js';
+import type { RedisHandle } from './redis.js';
 import { stayDurationsRouter } from './routes/stay-durations.js';
 import { tripsRouter } from './routes/trips.js';
 
@@ -30,6 +31,8 @@ export interface AppDeps {
   /** Google (Places and Routes). Missing = no API key, and Google features answer 503. */
   maps?: MapsClient;
   quotaCaps?: QuotaCaps;
+  /** Redis for the rate limiter and the matrix cache. Missing = no Redis. */
+  redis?: RedisHandle;
   /** Place searches allowed per user per minute. */
   searchRateLimit?: number;
   /** New places (Place Details fetches) allowed per user per minute. */
@@ -75,7 +78,9 @@ export function createApp(deps: AppDeps): Express {
   deps.beforeRoutes?.(app);
 
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
+    // Redis down is not a reason to fail the health check: the app works without it.
+    const redis = !deps.redis ? 'off' : deps.redis.isReady ? 'up' : 'down';
+    res.json({ status: 'ok', redis });
   });
 
   app.use(

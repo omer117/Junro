@@ -17,6 +17,14 @@ describe('loadConfig', () => {
     });
   });
 
+  it('has no Redis unless REDIS_URL is set (an empty value counts as not set)', () => {
+    expect(loadConfig(base).redisUrl).toBeUndefined();
+    expect(loadConfig({ ...base, REDIS_URL: '' }).redisUrl).toBeUndefined();
+    expect(loadConfig({ ...base, REDIS_URL: 'redis://localhost:6380' }).redisUrl).toBe(
+      'redis://localhost:6380',
+    );
+  });
+
   it.each(['DATABASE_URL', 'SESSION_SECRET'])('fails when %s is missing', (name) => {
     const env: Record<string, string> = { ...base };
     delete env[name];
