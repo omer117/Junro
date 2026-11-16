@@ -3,6 +3,17 @@ import type { LatLng } from './polyline';
 
 export type { LatLng };
 
+/** What state a stop is in, for the map. See stopStates.ts for how it is decided. */
+export type StopState = 'upcoming' | 'next' | 'done' | 'late' | 'waiting' | 'dropped';
+
+/** One leg of the route (between two stops), drawn in the style of how it is travelled. */
+export interface RouteLeg {
+  path: LatLng[];
+  mode: 'walk' | 'transit' | 'drive';
+  /** Already behind the person: drawn grey, under the others. */
+  travelled: boolean;
+}
+
 /** Something to show on the map. */
 export interface MapMarker {
   id: string;
