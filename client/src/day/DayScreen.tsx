@@ -17,6 +17,8 @@ import type { Place } from '../places/api';
 import { PlaceSearch } from '../places/PlaceSearch';
 import { useRoute, useSolve } from '../route/api';
 import { RouteSummary } from '../route/RouteSummary';
+import { paletteFor, paletteStyle } from '../styles/palettes';
+import { useTrips } from '../trips/api';
 import type { TravelMode } from '../trips/types';
 import {
   useAddStage,
@@ -101,6 +103,8 @@ export function DayScreen() {
   const updateStage = useUpdateStage(dayId ?? '');
   const deleteStage = useDeleteStage(dayId ?? '');
   const updateDay = useUpdateDay(dayId ?? '');
+  // The trip's colours (from its destination country): the trips list is already cached from home.
+  const trips = useTrips();
   const solve = useSolve(dayId ?? '');
   const [pending, setPending] = useState<Place | null>(null);
   const [editing, setEditing] = useState(false);
@@ -287,12 +291,22 @@ export function DayScreen() {
   const added = stages.filter((stage) => stage.position === null && !stage.dropped).length;
   const partlyRouted = placed > 0 && added > 0;
 
+  const palette = paletteFor(
+    trips.data?.find((trip) => trip.id === day.data.tripId)?.destination?.countryCode,
+  );
+  const themed = palette.id !== 'golden-hour';
+
   return (
-    <div className="day-screen" data-layout={wide ? 'wide' : 'narrow'}>
+    <div
+      className="day-screen"
+      data-layout={wide ? 'wide' : 'narrow'}
+      {...(themed ? { style: paletteStyle(palette) } : {})}
+    >
       <MapView
         markers={markers}
         route={routeLegs}
         baseStyle={day.data.travelMode === 'transit' ? 'transit' : 'default'}
+        {...(themed ? { accent: palette.accent } : {})}
         selectedId={selectedId}
         onSelect={setSelectedId}
         animateRoute={animate}
