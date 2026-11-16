@@ -123,6 +123,30 @@ npm run dev -w @junro/server      # http://localhost:3000/health
 3. Put the client ID and secret in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `GOOGLE_CALLBACK_URL`). Without them the server runs, and `/auth/google` answers 503.
 
+### GitHub and Microsoft sign-in (optional)
+
+One person keeps one Junro account whichever way they sign in. A new provider is attached to an
+existing account only when the email is verified on both sides; otherwise the person is told to
+sign in the way they did before and connect the new one in Settings. Neither provider is offered
+unless all three of its settings are present.
+
+- **GitHub:** Settings, Developer settings, OAuth Apps, New OAuth App. Homepage URL: your site.
+  Authorization callback URL: `http://localhost:3000/auth/github/callback` locally, and
+  `https://<your-domain>/api/auth/github/callback` in production (one app per address). Put the
+  client ID and a generated client secret in `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and
+  `GITHUB_CALLBACK_URL`. The app asks for the `user:email` scope, and only a primary, verified
+  email is accepted.
+- **Microsoft (personal accounts only):** in the Azure portal, Microsoft Entra ID, App
+  registrations, New registration. Supported account types: **Personal Microsoft accounts only**.
+  Redirect URI (type Web): `http://localhost:3000/auth/microsoft/callback` locally and
+  `https://<your-domain>/api/auth/microsoft/callback` in production. Under Certificates & secrets
+  create a client secret, and put the application (client) ID, the secret value and the redirect
+  URI in `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` and `MICROSOFT_CALLBACK_URL`. Work and
+  school accounts are refused on purpose: their email claim can be set by a tenant admin and is
+  not proof of ownership.
+- Sign in with Apple is not offered: it needs the paid Apple Developer Program and hides real
+  emails behind relay addresses, which breaks email linking.
+
 ## Google Maps Platform (places and routes)
 
 The server uses the Places API (New) for search and place details, and the Routes API for

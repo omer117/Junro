@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -21,11 +22,13 @@ function renderApp(path = '/') {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('App', () => {
-  it('shows the landing page with a real sign-in link when nobody is signed in', async () => {
+  it('shows the landing page, with the sign-in choices behind the Sign in button, when nobody is signed in', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
-        json(401, { error: { code: 'unauthenticated', message: 'Sign in required' } }),
+      vi.fn(async (url: string) =>
+        url === '/api/auth/providers'
+          ? json(200, { providers: ['google'] })
+          : json(401, { error: { code: 'unauthenticated', message: 'Sign in required' } }),
       ),
     );
 
@@ -34,8 +37,11 @@ describe('App', () => {
     expect(
       await screen.findByRole('heading', { name: /your trip, in the right order/i }),
     ).toBeInTheDocument();
-    const signIn = screen.getAllByRole('link', { name: /sign in/i })[0]!;
-    expect(signIn).toHaveAttribute('href', '/api/auth/google');
+    await userEvent.click(screen.getAllByRole('button', { name: /sign in/i })[0]!);
+    expect(await screen.findByRole('link', { name: /continue with google/i })).toHaveAttribute(
+      'href',
+      '/api/auth/google',
+    );
   });
 
   it('shows the trips screen for a signed-in user', async () => {

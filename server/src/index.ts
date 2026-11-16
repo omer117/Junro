@@ -17,6 +17,8 @@ const app = createApp({
   sessionStore: new PgSessionStore({ pool, createTableIfMissing: true }),
   secureCookies: config.secureCookies,
   ...(config.google ? { google: config.google } : {}),
+  ...(config.github ? { github: config.github } : {}),
+  ...(config.microsoft ? { microsoft: config.microsoft } : {}),
   clientUrl: config.clientUrl,
   quotaCaps: config.quotaCaps,
   ...(config.redisUrl ? { redis: createRedis(config.redisUrl) } : {}),

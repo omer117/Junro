@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { CATEGORY_LABELS } from '../categories';
 import { CategoryIcon } from '../icons/CategoryIcon';
 import { PageShell } from '../layout/PageShell';
+import { SignInMethods } from './SignInMethods';
 import {
   useResetStayDuration,
   useSaveStayDuration,
@@ -98,7 +99,10 @@ export function SettingsPage() {
       <Link to="/" className="settings__back">
         Back to your trips
       </Link>
-      <h1>Stay durations</h1>
+      <h1>Settings</h1>
+      <SignInMethods />
+
+      <h2>Stay durations</h2>
       <p className="settings__intro">
         How long do you like to stay? Junro uses this when it plans your days. You can still change
         the time for a single stop.

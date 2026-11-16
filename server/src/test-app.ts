@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { findOrCreateUser } from './auth/users.js';
+import { signInWithIdentity } from './auth/identities.js';
 import type { Express } from 'express';
 import type { Db } from './db/client.js';
 import { createApp, type AppDeps } from './app.js';
@@ -28,10 +28,11 @@ export function createTestApp(db: Db, overrides: Partial<AppDeps> = {}): Express
 
 /** Creates a user in the database and returns a supertest agent that is signed in as them. */
 export async function signInAs(db: Db, app: Express, name = 'Ann') {
-  const user = await findOrCreateUser(db, {
+  const user = await signInWithIdentity(db, {
     provider: 'google',
     providerId: `g-${name}`,
     email: `${name.toLowerCase()}@example.com`,
+    emailVerified: true,
     name,
   });
   const agent = request.agent(app);
