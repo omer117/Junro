@@ -64,15 +64,41 @@ export const users = pgTable(
   'users',
   {
     id: id(),
-    /** Which sign-in provider ('google' in beta). More providers need no schema change. */
-    provider: text('provider').notNull(),
-    /** The user's id at that provider. */
-    providerId: text('provider_id').notNull(),
+    /** Old: the provider of the first sign-in. No longer read; see `userIdentities`. */
+    provider: text('provider'),
+    /** Old: the user's id at that provider. No longer read. */
+    providerId: text('provider_id'),
     email: text('email').notNull(),
     name: text('name').notNull(),
     createdAt: createdAt(),
   },
   (t) => [unique('users_provider_identity').on(t.provider, t.providerId)],
+);
+
+/**
+ * A way to sign in: one row per provider account. One user can have several (Google and GitHub),
+ * so the person keeps one set of trips. Email is a fact about the identity, never a key.
+ */
+export const userIdentities = pgTable(
+  'user_identities',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** 'google' | 'github' | 'microsoft' */
+    provider: text('provider').notNull(),
+    /** The account's id at that provider. */
+    providerId: text('provider_id').notNull(),
+    email: text('email').notNull(),
+    /** Whether the provider says it checked that the person owns this email. */
+    emailVerified: boolean('email_verified').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('user_identities_provider_identity').on(t.provider, t.providerId),
+    index('user_identities_user_idx').on(t.userId),
+  ],
 );
 
 /** A user's own default stay per category. Never below the system minimum (enforced in the API). */

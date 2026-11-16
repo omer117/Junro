@@ -1,6 +1,7 @@
+import { useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { SignInSheet } from './SignInSheet';
 import './landing.css';
-
-const SIGN_IN = '/api/auth/google';
 
 /** A small picture of the product: a map with a route, and a boarding pass. Decorative. */
 function Art() {
@@ -63,17 +64,33 @@ const STEPS = [
 
 /** What people see before they sign in. */
 export function Landing() {
+  // A sign-in that came back refused or cancelled opens the sheet again, with the reason.
+  const [params, setParams] = useSearchParams();
+  const failed = params.get('signin') === 'failed';
+  const [open, setOpen] = useState(failed);
+  const openSheet = () => setOpen(true);
+  const closeSheet = () => {
+    setOpen(false);
+    if (failed) setParams({}, { replace: true });
+  };
+
   return (
     <div className="landing">
+      {open && (
+        <SignInSheet
+          onClose={closeSheet}
+          failedReason={failed ? (params.get('reason') ?? '') : null}
+        />
+      )}
       <header className="landing__header">
         <a className="landing__logo" href="/">
           junro <span lang="ja">順路</span>
         </a>
         <nav className="landing__nav" aria-label="Main">
           <a href="#how-it-works">How it works</a>
-          <a className="button button--dark" href={SIGN_IN}>
+          <button type="button" className="button button--dark" onClick={openSheet}>
             Sign in
-          </a>
+          </button>
         </nav>
       </header>
 
@@ -90,9 +107,9 @@ export function Landing() {
               opening hours included, so you can spend the trip there and not on the map.
             </p>
             <div className="landing__actions">
-              <a className="button button--accent" href={SIGN_IN}>
+              <button type="button" className="button button--accent" onClick={openSheet}>
                 Plan a trip
-              </a>
+              </button>
               <a className="button button--outline" href="#how-it-works">
                 See how it works
               </a>
@@ -135,9 +152,9 @@ export function Landing() {
 
         <section className="landing__cta">
           <h2>Takeoff is closer than you think.</h2>
-          <a className="button button--accent" href={SIGN_IN}>
+          <button type="button" className="button button--accent" onClick={openSheet}>
             Plan a trip
-          </a>
+          </button>
         </section>
       </main>
     </div>

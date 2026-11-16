@@ -1,58 +1,48 @@
 import request from 'supertest';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createDb } from '../db/client.js';
-import { users } from '../db/schema.js';
+import { userIdentities } from '../db/schema.js';
 import { resetDb, testDatabaseUrl } from '../db/test-db.js';
 import { createTestApp } from '../test-app.js';
-import { findOrCreateUser, verifyGoogleProfile } from './users.js';
+import { signInWithIdentity } from './identities.js';
+import { verifyGoogleProfile } from './users.js';
 
 const { db, pool } = createDb(testDatabaseUrl);
 
 beforeEach(() => resetDb(db));
 afterAll(() => pool.end());
 
-describe('findOrCreateUser', () => {
-  const identity = { provider: 'google', providerId: 'g-1', email: 'a@x.com', name: 'Ann' };
-
-  it('creates the user the first time', async () => {
-    const user = await findOrCreateUser(db, identity);
-
-    expect(user).toMatchObject(identity);
-    expect(await db.select().from(users)).toHaveLength(1);
-  });
-
-  it('returns the same user the second time and refreshes name and email', async () => {
-    const first = await findOrCreateUser(db, identity);
-    const second = await findOrCreateUser(db, { ...identity, email: 'new@x.com', name: 'Anna' });
-
-    expect(second.id).toBe(first.id);
-    expect(second).toMatchObject({ email: 'new@x.com', name: 'Anna' });
-    expect(await db.select().from(users)).toHaveLength(1);
-  });
-
-  it('keeps users of different providers apart', async () => {
-    const google = await findOrCreateUser(db, identity);
-    const facebook = await findOrCreateUser(db, { ...identity, provider: 'facebook' });
-
-    expect(facebook.id).not.toBe(google.id);
-  });
-});
-
 describe('verifyGoogleProfile', () => {
   it('turns a Google profile into a Junro user', async () => {
     const user = await verifyGoogleProfile(db, {
       id: 'google-123',
       displayName: 'Ann Lee',
-      emails: [{ value: 'ann@example.com' }],
+      emails: [{ value: 'ann@example.com', verified: true }],
     });
 
-    expect(user).toMatchObject({
+    expect(user).toMatchObject({ email: 'ann@example.com', name: 'Ann Lee' });
+    const [identity] = await db.select().from(userIdentities);
+    expect(identity).toMatchObject({
+      userId: user.id,
       provider: 'google',
       providerId: 'google-123',
-      email: 'ann@example.com',
-      name: 'Ann Lee',
+      emailVerified: true,
     });
   });
+
+  it.each([[undefined], [false], ['false']])(
+    'does not treat the email as verified when Google says %s',
+    async (verified) => {
+      await verifyGoogleProfile(db, {
+        id: 'g-2',
+        displayName: 'Ann',
+        emails: [{ value: 'ann@example.com', verified }],
+      });
+
+      const [identity] = await db.select().from(userIdentities);
+      expect(identity!.emailVerified).toBe(false);
+    },
+  );
 
   it('rejects a profile without an email', async () => {
     await expect(
@@ -70,10 +60,11 @@ describe('session routes', () => {
   });
 
   it('GET /auth/me returns the signed-in user, and only safe fields', async () => {
-    const user = await findOrCreateUser(db, {
+    const user = await signInWithIdentity(db, {
       provider: 'google',
       providerId: 'g-1',
       email: 'a@x.com',
+      emailVerified: true,
       name: 'Ann',
     });
     const agent = request.agent(createTestApp(db));
@@ -86,10 +77,11 @@ describe('session routes', () => {
   });
 
   it('POST /auth/logout ends the session', async () => {
-    const user = await findOrCreateUser(db, {
+    const user = await signInWithIdentity(db, {
       provider: 'google',
       providerId: 'g-1',
       email: 'a@x.com',
+      emailVerified: true,
       name: 'Ann',
     });
     const agent = request.agent(createTestApp(db));
@@ -108,10 +100,11 @@ describe('session routes', () => {
   });
 
   it('the session cookie is httpOnly and SameSite=Lax', async () => {
-    const user = await findOrCreateUser(db, {
+    const user = await signInWithIdentity(db, {
       provider: 'google',
       providerId: 'g-1',
       email: 'a@x.com',
+      emailVerified: true,
       name: 'Ann',
     });
     const res = await request(createTestApp(db)).post(`/__login/${user.id}`);

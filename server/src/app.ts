@@ -1,9 +1,10 @@
 import express, { type Express } from 'express';
 import session from 'express-session';
-import { DEFAULT_QUOTA_CAPS, type GoogleConfig } from './config.js';
+import { DEFAULT_QUOTA_CAPS, type OAuthConfig } from './config.js';
 import type { Db } from './db/client.js';
 import { authRoutes } from './auth/routes.js';
-import { createPassport } from './auth/passport.js';
+import { createPassport, type PassportOptions } from './auth/passport.js';
+import type { ProviderName } from './auth/providers.js';
 import { errorHandler, notFound } from './errors.js';
 import { withUsageGuard } from './google/guarded.js';
 import { createUsageGuard, type QuotaCaps } from './google/guard.js';
@@ -28,7 +29,12 @@ export interface AppDeps {
   /** Where sessions are kept. Defaults to memory (fine for tests, not for production). */
   sessionStore?: session.Store;
   secureCookies?: boolean;
-  google?: GoogleConfig;
+  google?: OAuthConfig;
+  github?: OAuthConfig;
+  /** Personal Microsoft accounts only. */
+  microsoft?: OAuthConfig;
+  /** Tests: stand-ins for a provider's strategy, and a ready Microsoft configuration. */
+  authTestHooks?: Pick<PassportOptions, 'strategies' | 'microsoftConfiguration'>;
   clientUrl?: string;
   /** Google (Places and Routes). Missing = no API key, and Google features answer 503. */
   maps?: MapsClient;
@@ -75,7 +81,16 @@ export function createApp(deps: AppDeps): Express {
   const guard = createUsageGuard({ db: deps.db, caps: deps.quotaCaps ?? DEFAULT_QUOTA_CAPS });
   const maps = deps.maps ? withUsageGuard(deps.maps, guard) : undefined;
 
-  const passport = createPassport(deps.db, deps.google);
+  const { passport, prepare } = createPassport(deps.db, {
+    google: deps.google,
+    github: deps.github,
+    microsoft: deps.microsoft,
+    ...deps.authTestHooks,
+  });
+  const enabled = new Set<ProviderName>();
+  if (deps.google || deps.authTestHooks?.strategies?.google) enabled.add('google');
+  if (deps.github || deps.authTestHooks?.strategies?.github) enabled.add('github');
+  if (deps.microsoft || deps.authTestHooks?.strategies?.microsoft) enabled.add('microsoft');
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -88,8 +103,10 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     '/auth',
     authRoutes({
+      db: deps.db,
       passport,
-      googleEnabled: deps.google !== undefined,
+      prepare,
+      enabled,
       clientUrl: deps.clientUrl ?? '/',
     }),
   );
