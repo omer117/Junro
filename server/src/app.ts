@@ -8,7 +8,7 @@ import { errorHandler, notFound } from './errors.js';
 import { withUsageGuard } from './google/guarded.js';
 import { createUsageGuard, type QuotaCaps } from './google/guard.js';
 import type { MapsClient } from './google/types.js';
-import { createRateLimiter } from './rate-limit.js';
+import { createRateLimiter, createRedisRateLimiter, type RateLimiter } from './rate-limit.js';
 import { placesRouter } from './routes/places.js';
 import { airportsRouter } from './routes/airports.js';
 import { daysRouter } from './routes/days.js';
@@ -44,6 +44,20 @@ export interface AppDeps {
 }
 
 export function createApp(deps: AppDeps): Express {
+  // One limiter per job. With Redis the count is shared and survives a restart; the in-memory
+  // limiter is the fallback, and the whole answer when there is no Redis.
+  const limiter = (name: string, limit: number): RateLimiter => {
+    const local = createRateLimiter({ limit, windowMs: 60_000 });
+    return deps.redis
+      ? createRedisRateLimiter({
+          redis: deps.redis,
+          name,
+          limit,
+          windowMs: 60_000,
+          fallback: local,
+        })
+      : local;
+  };
   const app = express();
   // In production a proxy (Vercel) sits in front and talks plain http to this server. Trusting
   // its X-Forwarded-Proto header lets express-session see that the browser used https, which
@@ -99,8 +113,8 @@ export function createApp(deps: AppDeps): Express {
     placesRouter({
       db: deps.db,
       maps,
-      searchLimiter: createRateLimiter({ limit: deps.searchRateLimit ?? 30, windowMs: 60_000 }),
-      placeLimiter: createRateLimiter({ limit: deps.placeRateLimit ?? 20, windowMs: 60_000 }),
+      searchLimiter: limiter('search', deps.searchRateLimit ?? 30),
+      placeLimiter: limiter('place', deps.placeRateLimit ?? 20),
     }),
   );
   app.use(daysRouter(deps.db));
@@ -109,14 +123,14 @@ export function createApp(deps: AppDeps): Express {
     solveRouter({
       db: deps.db,
       maps,
-      limiter: createRateLimiter({ limit: deps.solveRateLimit ?? 10, windowMs: 60_000 }),
+      limiter: limiter('solve', deps.solveRateLimit ?? 10),
     }),
   );
   app.use(
     legsRouter({
       db: deps.db,
       maps,
-      limiter: createRateLimiter({ limit: deps.solveRateLimit ?? 10, windowMs: 60_000 }),
+      limiter: limiter('legs', deps.solveRateLimit ?? 10),
     }),
   );
   app.use(stagesRouter(deps.db));

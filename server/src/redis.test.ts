@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createRedis, tryRedis, type RedisConnection, type RedisHandle } from './redis.js';
 
-export const testRedisUrl = process.env.TEST_REDIS_URL ?? 'redis://localhost:6380/1';
+import { testRedisUrl } from './test-redis.js';
 
 /** A stand-in for Redis in the tests that are about failures. */
 const stub = (overrides: Partial<RedisHandle> = {}): RedisHandle => ({

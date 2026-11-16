@@ -62,7 +62,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     const { mode: requested, from, now } = req.body as z.infer<typeof solveBody>;
 
     if (!maps) throw new GoogleNotConfiguredError();
-    if (!limiter.allow(userId)) {
+    if (!(await limiter.allow(userId))) {
       throw new HttpError(429, 'rate_limited', 'Too many route calculations. Wait a moment.');
     }
 
