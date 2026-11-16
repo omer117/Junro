@@ -1,41 +1,24 @@
 import type { Db } from '../db/client.js';
-import { users } from '../db/schema.js';
+import { signInWithIdentity } from './identities.js';
 import type { User } from './types.js';
-
-export interface ProviderIdentity {
-  provider: string;
-  providerId: string;
-  email: string;
-  name: string;
-}
-
-/** Finds the user for this provider identity, creating them on first sign-in. */
-export async function findOrCreateUser(db: Db, identity: ProviderIdentity): Promise<User> {
-  const [user] = await db
-    .insert(users)
-    .values(identity)
-    .onConflictDoUpdate({
-      target: [users.provider, users.providerId],
-      set: { email: identity.email, name: identity.name },
-    })
-    .returning();
-  return user!;
-}
 
 /** The part of a Google profile we use (passport-google-oauth20 gives us more). */
 export interface GoogleProfile {
   id: string;
   displayName: string;
-  emails?: Array<{ value: string }> | undefined;
+  emails?: Array<{ value: string; verified?: boolean | string | undefined }> | undefined;
 }
 
 export async function verifyGoogleProfile(db: Db, profile: GoogleProfile): Promise<User> {
-  const email = profile.emails?.[0]?.value;
-  if (!email) throw new Error('Google did not return an email address for this account');
-  return findOrCreateUser(db, {
+  const email = profile.emails?.[0];
+  if (!email?.value) throw new Error('Google did not return an email address for this account');
+  return signInWithIdentity(db, {
     provider: 'google',
     providerId: profile.id,
-    email,
+    email: email.value,
+    // Google says whether it checked the address (`email_verified` in the ID token). Some library
+    // versions pass it as a string.
+    emailVerified: email.verified === true || email.verified === 'true',
     name: profile.displayName,
   });
 }
