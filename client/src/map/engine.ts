@@ -28,12 +28,8 @@ export interface MapMarker {
   category?: Category;
   /** Stops: the order in the route. Without it the marker shows the category icon instead. */
   number?: number;
-  /** Stops: already visited today. Shown greyed out. */
-  done?: boolean;
-  /** Stops: left out of the route because it did not fit. Drawn hollow, without a number. */
-  dropped?: boolean;
-  /** Stops: this stop has a problem (opening hours). Shown with a warning colour. */
-  warning?: boolean;
+  /** Stops: what state the stop is in (default 'upcoming'). Shown as a badge with words, not colour alone. */
+  state?: StopState;
   /** Start and end: the text on the pin, for example "Start · 9:00". */
   label?: string;
   /** Loop: the text for the end, shown under `label`. */
@@ -51,8 +47,16 @@ export interface Padding {
 /** One map on the page. */
 export interface EngineMap {
   setMarkers(markers: MapMarker[]): void;
-  /** `line` is the encoded polyline the server sends, or null to clear the route. */
-  setRoute(line: string | null, options: { animate: boolean }): void;
+  /** The route as legs, each drawn in the style of how it is travelled; null clears the route. */
+  setRoute(legs: RouteLeg[] | null, options: { animate: boolean }): void;
+  /** The map's own look: 'transit' shows public transport lines faintly. */
+  setBaseStyle(style: 'default' | 'transit'): void;
+  /** Marks one stop as chosen (null for none). Does not move the map. */
+  setSelected(id: string | null): void;
+  /** Called when a stop on the map is tapped, or the map itself (null) to clear the choice. */
+  onSelect(listener: (id: string | null) => void): void;
+  /** Brings a stop into view if it is off screen, without changing the zoom. */
+  panTo(id: string): void;
   fit(padding: Padding): void;
   destroy(): void;
 }

@@ -63,12 +63,22 @@ describe('MapView', () => {
     const fake = fakeEngine();
     const { wrapper } = setup(async () => fake.engine);
 
-    const { rerender } = render(<MapView markers={[]} routeLine="abc" animateRoute />, { wrapper });
+    const legs = [
+      {
+        path: [
+          { lat: 0, lng: 0 },
+          { lat: 0, lng: 1 },
+        ],
+        mode: 'walk' as const,
+        travelled: false,
+      },
+    ];
+    const { rerender } = render(<MapView markers={[]} route={legs} animateRoute />, { wrapper });
     await waitFor(() =>
-      expect(fake.created[0]!.map.setRoute).toHaveBeenCalledWith('abc', { animate: true }),
+      expect(fake.created[0]!.map.setRoute).toHaveBeenCalledWith(legs, { animate: true }),
     );
-    rerender(<MapView markers={[]} routeLine="abc" />);
-    rerender(<MapView markers={[]} routeLine={null} />);
+    rerender(<MapView markers={[]} route={legs} />);
+    rerender(<MapView markers={[]} route={null} />);
 
     expect(fake.created[0]!.map.setRoute).toHaveBeenLastCalledWith(null, { animate: false });
   });
@@ -133,5 +143,48 @@ describe('MapView', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/map could not be loaded/i);
     expect(alert).not.toHaveTextContent(/network down/i);
+  });
+
+  it('passes a tap on a stop up, and a tap on the map (null)', async () => {
+    const fake = fakeEngine();
+    const { wrapper } = setup(async () => fake.engine);
+    const onSelect = vi.fn();
+
+    render(<MapView markers={[marker('a')]} onSelect={onSelect} />, { wrapper });
+    await waitFor(() => expect(fake.created).toHaveLength(1));
+    await waitFor(() => expect(fake.created[0]!.map.onSelect).toHaveBeenCalled());
+
+    fake.created[0]!.select('a');
+    fake.created[0]!.select(null);
+
+    expect(onSelect.mock.calls).toEqual([['a'], [null]]);
+  });
+
+  it('shows the chosen stop and brings it into view, without fitting the map again', async () => {
+    const fake = fakeEngine();
+    const { wrapper } = setup(async () => fake.engine);
+    const padding = { top: 1, right: 2, bottom: 3, left: 4 };
+
+    const markers = [marker('a')];
+    const { rerender } = render(<MapView markers={markers} padding={padding} />, {
+      wrapper,
+    });
+    await waitFor(() => expect(fake.created[0]!.map.fit).toHaveBeenCalledTimes(1));
+    rerender(<MapView markers={markers} padding={padding} selectedId="a" />);
+
+    await waitFor(() => expect(fake.created[0]!.map.setSelected).toHaveBeenLastCalledWith('a'));
+    expect(fake.created[0]!.map.panTo).toHaveBeenCalledWith('a');
+    expect(fake.created[0]!.map.fit).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the transit look on a public transport day', async () => {
+    const fake = fakeEngine();
+    const { wrapper } = setup(async () => fake.engine);
+
+    const { rerender } = render(<MapView markers={[]} baseStyle="transit" />, { wrapper });
+    await waitFor(() => expect(fake.created[0]!.map.setBaseStyle).toHaveBeenCalledWith('transit'));
+    rerender(<MapView markers={[]} />);
+
+    expect(fake.created[0]!.map.setBaseStyle).toHaveBeenLastCalledWith('default');
   });
 });

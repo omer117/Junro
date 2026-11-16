@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import type { EngineMap, MapMarker, Padding } from './engine';
+import type { EngineMap, MapMarker, Padding, RouteLeg } from './engine';
 import { mergeEndpoints } from './endpoints';
 import { MapEngineError, useMapEngineLoader } from './MapEngineContext';
 
 export interface MapViewProps {
   markers: MapMarker[];
-  /** The encoded route line from the server, or null/undefined for none. */
-  routeLine?: string | null;
+  /** The route as legs (see buildRouteLegs), or null/undefined for none. */
+  route?: RouteLeg[] | null;
+  /** The map's own look. Public transport days show the transit lines faintly. */
+  baseStyle?: 'default' | 'transit';
+  /** The chosen stop, if any. */
+  selectedId?: string | null;
+  /** A stop (or the map, with null) was tapped. */
+  onSelect?: (id: string | null) => void;
   /** Draw the route growing across the map, instead of showing it at once. */
   animateRoute?: boolean;
   /** Space to keep clear around the content (the sheet or panel that covers part of the map). */
@@ -20,7 +26,10 @@ type State = 'loading' | 'ready' | 'not_configured' | 'failed';
 /** A map that fills its parent. The parent decides the size. */
 export function MapView({
   markers,
-  routeLine = null,
+  route = null,
+  baseStyle = 'default',
+  selectedId = null,
+  onSelect,
   animateRoute = false,
   padding = NO_PADDING,
 }: MapViewProps) {
@@ -59,22 +68,34 @@ export function MapView({
     };
   }, [loadEngine]);
 
+  // Taps on the map come back through the latest callback, without making a new map.
+  const selectHandler = useRef(onSelect);
+  useEffect(() => {
+    selectHandler.current = onSelect;
+  }, [onSelect]);
+  useEffect(() => {
+    map?.onSelect((id) => selectHandler.current?.(id));
+  }, [map]);
+
+  useEffect(() => {
+    map?.setBaseStyle(baseStyle);
+  }, [map, baseStyle]);
+
+  // The chosen stop is not part of the fit below: choosing must never move or zoom the map. The
+  // engine remembers the choice, so it also survives the markers being redrawn.
+  useEffect(() => {
+    if (!map) return;
+    map.setSelected(selectedId);
+    if (selectedId) map.panTo(selectedId);
+  }, [map, selectedId]);
+
   useEffect(() => {
     if (!map) return;
     map.setMarkers(mergeEndpoints(markers));
-    map.setRoute(routeLine, { animate: animateRoute });
+    map.setRoute(route, { animate: animateRoute });
     map.fit(padding);
     // `padding` is compared by value so a new object with the same numbers does not refit.
-  }, [
-    map,
-    markers,
-    routeLine,
-    animateRoute,
-    padding.top,
-    padding.right,
-    padding.bottom,
-    padding.left,
-  ]);
+  }, [map, markers, route, animateRoute, padding.top, padding.right, padding.bottom, padding.left]);
 
   return (
     <div className="map-view" role="region" aria-label="Map">

@@ -736,3 +736,23 @@
   color: var(--ink-muted);
   font-size: var(--text-sm);
 }
+
+/* A stop's name is a button: tap it to show the stop on the map. The row it belongs to is current. */
+.stop-list__select,
+.timeline__select {
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stop-list li[aria-current='true'],
+.timeline__row[aria-current='true'] {
+  background: var(--ground);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 3px 0 0 var(--accent);
+}

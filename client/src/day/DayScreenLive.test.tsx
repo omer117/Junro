@@ -135,9 +135,9 @@ describe('a day in progress', () => {
     await screen.findByRole('list', { name: 'Timeline' });
 
     await vi.waitFor(() =>
-      expect(lastMarkers().find((m) => m.name === 'Senso-ji')).toMatchObject({ done: true }),
+      expect(lastMarkers().find((m) => m.name === 'Senso-ji')).toMatchObject({ state: 'done' }),
     );
-    expect(lastMarkers().find((m) => m.name === 'Ueno ramen')?.done).toBeUndefined();
+    expect(lastMarkers().find((m) => m.name === 'Ueno ramen')?.state).not.toBe('done');
   });
 
   it('says what it does with your location before using it, and then replans from there', async () => {
