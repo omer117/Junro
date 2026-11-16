@@ -9,6 +9,8 @@ export interface MapViewProps {
   route?: RouteLeg[] | null;
   /** The map's own look. Public transport days show the transit lines faintly. */
   baseStyle?: 'default' | 'transit';
+  /** The colour of the route line (the trip's accent). Default: Golden hour's. */
+  accent?: string;
   /** The chosen stop, if any. */
   selectedId?: string | null;
   /** A stop (or the map, with null) was tapped. */
@@ -28,6 +30,7 @@ export function MapView({
   markers,
   route = null,
   baseStyle = 'default',
+  accent,
   selectedId = null,
   onSelect,
   animateRoute = false,
@@ -92,10 +95,20 @@ export function MapView({
   useEffect(() => {
     if (!map) return;
     map.setMarkers(mergeEndpoints(markers));
-    map.setRoute(route, { animate: animateRoute });
+    map.setRoute(route, { animate: animateRoute, ...(accent ? { accent } : {}) });
     map.fit(padding);
     // `padding` is compared by value so a new object with the same numbers does not refit.
-  }, [map, markers, route, animateRoute, padding.top, padding.right, padding.bottom, padding.left]);
+  }, [
+    map,
+    markers,
+    route,
+    accent,
+    animateRoute,
+    padding.top,
+    padding.right,
+    padding.bottom,
+    padding.left,
+  ]);
 
   return (
     <div className="map-view" role="region" aria-label="Map">
