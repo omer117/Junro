@@ -43,6 +43,10 @@ export const CATEGORIES = [
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
+/** `must` is never dropped; `optional` ("if there is time") is left out when it would make the day late. */
+export const PRIORITIES = ['must', 'optional'] as const;
+export type Priority = (typeof PRIORITIES)[number];
+
 export const TRAVEL_MODES = ['walking', 'driving', 'transit'] as const;
 export type TravelMode = (typeof TRAVEL_MODES)[number];
 
@@ -131,6 +135,8 @@ export const days = pgTable(
      */
     /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
     liveFrom: jsonb('live_from').$type<LiveFrom>(),
+    /** When the day should end at the latest (minutes since midnight), or null for no limit. */
+    endTime: integer('end_time'),
     /** Public transport days: the moment (ISO timestamp) the saved route was planned for. */
     transitDeparture: text('transit_departure'),
     routeLines: jsonb('route_lines').$type<RouteLine[]>().notNull().default([]),
@@ -164,6 +170,9 @@ export const stages = pgTable(
     /** Manual override for this one stage; wins over the user's preference. */
     stayOverrideMinutes: integer('stay_override_minutes'),
     done: boolean('done').notNull().default(false),
+    priority: text('priority').$type<Priority>().notNull().default('must'),
+    /** Left out of the route by the last calculation because it would have made the day late. */
+    dropped: boolean('dropped').notNull().default(false),
     /** Place in the solved route (0 = first). null until the day has been solved. */
     position: integer('position'),
     createdAt: createdAt(),

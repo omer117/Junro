@@ -48,6 +48,7 @@ describe('days API', () => {
       endName: null,
       startPlaceId: null,
       endPlaceId: null,
+      endTime: null,
       stageCount: 0,
     });
   });

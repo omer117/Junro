@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
 import { TRAVEL_MODES, days, stages } from '../db/schema.js';
+import { HttpError } from '../errors.js';
 import { validateBody } from '../validate.js';
 import { uuidParam } from './helpers.js';
 import { requireOwnedDay, requireOwnedTrip } from './ownership.js';
@@ -15,7 +16,7 @@ const pointName = z.string().trim().min(1).max(100);
 /** Real Google place ids look like "ChIJ...": letters, digits, - and _. */
 const placeId = z.string().regex(/^[A-Za-z0-9_-]{10,200}$/);
 
-const dayBody = z.object({
+const dayFields = z.object({
   date: z.iso.date(),
   start: point,
   end: point,
@@ -25,14 +26,29 @@ const dayBody = z.object({
   endPlaceId: placeId.optional(),
   /** Minutes since midnight. */
   startTime: z.number().int().min(0).max(1439),
+  /** When the day should end at the latest (minutes since midnight), after the start. Optional. */
+  endTime: z.number().int().min(1).max(2879).optional(),
   travelMode: z.enum(TRAVEL_MODES),
 });
 
+const dayBody = dayFields.refine(
+  (day) => day.endTime === undefined || day.endTime > day.startTime,
+  {
+    message: 'The day must end after it starts',
+    path: ['endTime'],
+  },
+);
+
 /** A change can also clear a name (null). */
-const dayPatch = dayBody
-  .omit({ startName: true, endName: true, startPlaceId: true, endPlaceId: true })
+const dayPatch = dayFields
+  .omit({ startName: true, endName: true, startPlaceId: true, endPlaceId: true, endTime: true })
   .partial()
-  .extend({ startName: pointName.nullable().optional(), endName: pointName.nullable().optional() });
+  .extend({
+    startName: pointName.nullable().optional(),
+    endName: pointName.nullable().optional(),
+    /** null removes the limit. */
+    endTime: z.number().int().min(1).max(2879).nullable().optional(),
+  });
 
 type DayRow = typeof days.$inferSelect;
 
@@ -48,6 +64,7 @@ export function toDay(row: DayRow, stageCount: number) {
     endName: row.endName,
     startPlaceId: row.startPlaceId,
     endPlaceId: row.endPlaceId,
+    endTime: row.endTime,
     startTime: row.startTime,
     travelMode: row.travelMode,
     stageCount,
@@ -96,6 +113,7 @@ export function daysRouter(db: Db): Router {
         startPlaceId: body.startPlaceId ?? null,
         endPlaceId: body.endPlaceId ?? null,
         startTime: body.startTime,
+        ...(body.endTime !== undefined && { endTime: body.endTime }),
         travelMode: body.travelMode,
       })
       .returning();
@@ -110,6 +128,15 @@ export function daysRouter(db: Db): Router {
   router.patch('/days/:id', validateBody(dayPatch), async (req, res) => {
     const day = await requireOwnedDay(db, req.user!.id, uuidParam(req.params.id));
     const body = req.body as z.infer<typeof dayPatch>;
+
+    // The day must end after it starts, whichever of the two is being changed.
+    const startTime = body.startTime ?? day.startTime;
+    const endTime = body.endTime !== undefined ? body.endTime : day.endTime;
+    if (endTime !== null && endTime <= startTime) {
+      throw new HttpError(400, 'validation_error', 'The day must end after it starts', [
+        { path: 'endTime', message: 'The day must end after it starts' },
+      ]);
+    }
     const changes = {
       ...(body.date !== undefined && { date: body.date }),
       ...(body.start && { startLat: body.start.lat, startLng: body.start.lng }),
@@ -117,6 +144,7 @@ export function daysRouter(db: Db): Router {
       ...(body.startName !== undefined && { startName: body.startName }),
       ...(body.endName !== undefined && { endName: body.endName }),
       ...(body.startTime !== undefined && { startTime: body.startTime }),
+      ...(body.endTime !== undefined && { endTime: body.endTime }),
       ...(body.travelMode !== undefined && { travelMode: body.travelMode }),
     };
     if (Object.keys(changes).length === 0) {
