@@ -19,8 +19,13 @@ export interface Stage {
   stayMinutes: number;
   /** No window means always open. */
   window?: TimeWindow;
-  /** The place is closed on the whole day. It stays in the route, flagged, never dropped. */
+  /** The place is closed on the whole day. A must stays in the route, flagged; an optional one is dropped. */
   closedAllDay?: boolean;
+  /**
+   * `must` (the default) is never dropped. `optional` ("if there is time") is left out when keeping
+   * it would make the day late; it is always reported in `SolveResult.dropped`, never silently.
+   */
+  priority?: 'must' | 'optional';
 }
 
 /**
@@ -36,6 +41,8 @@ export interface SolveInput {
   startTime: Minutes;
   stages: Stage[];
   travelTime: TravelTimeFn;
+  /** When the day should end at the latest (back at the end point). Missing means no limit. */
+  endTime?: Minutes;
 }
 
 export interface Visit {
@@ -54,15 +61,22 @@ export type Violation =
   /** The stay is longer than the opening window itself; no order can fix it. */
   | { stageId: string; kind: 'window_too_short' }
   /** The place is closed on this whole day; no order can fix it. */
-  | { stageId: string; kind: 'closed_all_day' };
+  | { stageId: string; kind: 'closed_all_day' }
+  /** We reach the end point after the day end time (even without the optional stops). */
+  | { kind: 'past_day_end'; minutesLate: number };
 
 export interface SolveResult {
-  /** Stage ids in visiting order. Never missing a stage. */
+  /** Stage ids in visiting order. Every must stage is in it; optional stages may be left out. */
   order: string[];
   visits: Visit[];
   /** When we arrive at the end point. */
   endArrival: Minutes;
   violations: Violation[];
-  /** Sum of minutes late over all stages. */
+  /** Sum of minutes late over all stages, plus the minutes past the day end time. */
   totalLateness: number;
+  /**
+   * Optional stage ids that were left out, in input order. `solve` fills it; `evaluateOrder`
+   * judges the order it is given and always answers an empty list.
+   */
+  dropped: string[];
 }

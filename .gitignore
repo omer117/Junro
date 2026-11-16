@@ -34,3 +34,7 @@ CLAUDE.md
 # Private keys (SSH etc.) must never be committed
 *.key
 *.pem
+
+# Obsidian notes vault
+Junro/
+.obsidian/

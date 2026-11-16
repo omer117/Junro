@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { CATEGORIES, places, stages } from '../db/schema.js';
+import { CATEGORIES, PRIORITIES, places, stages } from '../db/schema.js';
 import { HttpError } from '../errors.js';
 import { validateBody } from '../validate.js';
 import { uuidParam } from './helpers.js';
@@ -17,6 +17,7 @@ const createBody = z.object({
   placeId: z.uuid(),
   category: z.enum(CATEGORIES),
   stayOverrideMinutes: override.optional(),
+  priority: z.enum(PRIORITIES).optional(),
 });
 
 const patchBody = z.object({
@@ -24,6 +25,7 @@ const patchBody = z.object({
   /** null removes the override. */
   stayOverrideMinutes: override.nullable().optional(),
   done: z.boolean().optional(),
+  priority: z.enum(PRIORITIES).optional(),
 });
 
 const stageWithPlace = {
@@ -32,6 +34,8 @@ const stageWithPlace = {
   category: stages.category,
   stayOverrideMinutes: stages.stayOverrideMinutes,
   done: stages.done,
+  priority: stages.priority,
+  dropped: stages.dropped,
   position: stages.position,
   place: {
     id: places.id,
@@ -90,6 +94,7 @@ export function stagesRouter(db: Db): Router {
         dayId: day.id,
         placeId: body.placeId,
         category: body.category,
+        ...(body.priority !== undefined && { priority: body.priority }),
         ...(body.stayOverrideMinutes !== undefined && {
           stayOverrideMinutes: body.stayOverrideMinutes,
         }),
@@ -112,6 +117,7 @@ export function stagesRouter(db: Db): Router {
         stayOverrideMinutes: body.stayOverrideMinutes,
       }),
       ...(body.done !== undefined && { done: body.done }),
+      ...(body.priority !== undefined && { priority: body.priority }),
     };
     if (Object.keys(changes).length > 0) {
       await db.update(stages).set(changes).where(eq(stages.id, stage.id));

@@ -19,6 +19,8 @@ export interface MapMarker {
   number?: number;
   /** Stops: already visited today. Shown greyed out. */
   done?: boolean;
+  /** Stops: left out of the route because it did not fit. Drawn hollow, without a number. */
+  dropped?: boolean;
   /** Stops: this stop has a problem (opening hours). Shown with a warning colour. */
   warning?: boolean;
   /** Start and end: the text on the pin, for example "Start · 9:00". */

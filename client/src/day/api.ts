@@ -44,8 +44,15 @@ export function useAddStage(dayId: string) {
 export function useUpdateStage(dayId: string) {
   const refresh = useRefresh(dayId);
   return useMutation({
-    mutationFn: ({ id, ...change }: { id: string; category?: Category; done?: boolean }) =>
-      api<Stage>(`/stages/${id}`, { method: 'PATCH', body: change }),
+    mutationFn: ({
+      id,
+      ...change
+    }: {
+      id: string;
+      category?: Category;
+      done?: boolean;
+      priority?: 'must' | 'optional';
+    }) => api<Stage>(`/stages/${id}`, { method: 'PATCH', body: change }),
     onSuccess: refresh,
   });
 }
@@ -61,7 +68,7 @@ export function useDeleteStage(dayId: string) {
 export function useUpdateDay(dayId: string) {
   const refresh = useRefresh(dayId);
   return useMutation({
-    mutationFn: (change: { travelMode?: TravelMode }) =>
+    mutationFn: (change: { travelMode?: TravelMode; endTime?: number | null }) =>
       api<DayDetail>(`/days/${dayId}`, { method: 'PATCH', body: change }),
     onSuccess: refresh,
   });
@@ -77,6 +84,8 @@ export interface NewDay {
   endPlaceId: string;
   /** Minutes since midnight. */
   startTime: number;
+  /** When the day should end at the latest (minutes since midnight), if the person said. */
+  endTime?: number;
   travelMode: TravelMode;
 }
 

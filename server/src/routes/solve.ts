@@ -71,11 +71,14 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     // Mid-day: stages that are done are not planned again. If the user says where they are and
     // what time it is, the route starts there and then; the end point stays the day's end point.
     const live = from !== undefined && now !== undefined ? { ...from, time: now } : null;
-    const { start, end, startTime, solverStages, doneIds, savedIds } = remainingOf(
-      problem,
-      day,
-      live,
-    );
+    const remaining = remainingOf(problem, day, live);
+    const { start, end, startTime, doneIds, savedIds, endTime } = remaining;
+
+    // A full calculation thinks again about every stop that is not done, the dropped ones too
+    // (the day may have got longer, a stop may now be a must). "Keep my order" only fits new
+    // stops into the route: a dropped stop stays dropped.
+    const mode = requested === 'minimal' && savedIds.length > 0 ? 'minimal' : 'full';
+    const solverStages = mode === 'full' ? remaining.candidateStages : remaining.solverStages;
 
     // All travel times for the day, fetched (or read from the cache) before solving.
     // Public transport days walk where it is close and ride where it is far (see hybrid.ts).
@@ -104,9 +107,8 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       startTime,
       stages: solverStages,
       travelTime,
+      ...(endTime !== undefined ? { endTime } : {}),
     };
-
-    const mode = requested === 'minimal' && savedIds.length > 0 ? 'minimal' : 'full';
 
     let result: SolveResult;
     try {
@@ -127,6 +129,17 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     await db.transaction(async (tx) => {
       for (const [position, stageId] of toSave.entries()) {
         await tx.update(stages).set({ position }).where(eq(stages.id, stageId));
+      }
+      // Stops left out have no place in the route; they are remembered, so a reload shows them.
+      // "Keep my order" does not change who is dropped.
+      if (mode === 'full') {
+        for (const stage of solverStages) {
+          const left = result.dropped.includes(stage.id);
+          await tx
+            .update(stages)
+            .set({ dropped: left, ...(left ? { position: null } : {}) })
+            .where(eq(stages.id, stage.id));
+        }
       }
       // Remember where the day was replanned from (or forget it), so the saved route matches.
       await tx
@@ -164,6 +177,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       endArrival: result.endArrival,
       violations: result.violations,
       totalLateness: result.totalLateness,
+      dropped: mode === 'full' ? result.dropped : remaining.droppedIds,
       live,
       ...(legs ? { legs } : {}),
       ...(hybrid ? { transitAvailable: hybrid.transitAvailable } : {}),

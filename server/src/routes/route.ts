@@ -24,11 +24,8 @@ export function routeRouter(db: Db): Router {
   router.get('/days/:dayId/route', async (req, res) => {
     const day = await requireOwnedDay(db, req.user!.id, uuidParam(req.params.dayId));
     const problem = await loadDayProblem(db, req.user!.id, day);
-    const { start, end, startTime, solverStages, savedIds, live } = remainingOf(
-      problem,
-      day,
-      day.liveFrom,
-    );
+    const { start, end, startTime, solverStages, savedIds, live, endTime, droppedIds } =
+      remainingOf(problem, day, day.liveFrom);
     // "No route yet" is a normal answer, so it is 204 (No Content), not an error: browsers show a
     // 404 as a red error in the console every time the day screen asks.
     const noRoute = () => res.status(204).end();
@@ -63,6 +60,7 @@ export function routeRouter(db: Db): Router {
       startTime,
       stages: solverStages,
       travelTime,
+      ...(endTime !== undefined ? { endTime } : {}),
     };
     const result = evaluateOrder(input, savedIds);
 
@@ -81,6 +79,7 @@ export function routeRouter(db: Db): Router {
       endArrival: result.endArrival,
       violations: result.violations,
       totalLateness: result.totalLateness,
+      dropped: droppedIds,
       live,
       ...(legs ? { legs } : {}),
       ...(hybrid ? { transitAvailable: hybrid.transitAvailable } : {}),

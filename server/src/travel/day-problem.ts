@@ -50,6 +50,7 @@ export async function loadDayProblem(db: Db, userId: string, day: DayRow): Promi
       preference: preferred.get(stage.category),
       override: stage.stayOverrideMinutes,
     }),
+    priority: stage.priority,
     ...windowForDate(place.openingHours as OpeningHours | null, day.date),
   }));
 
@@ -67,13 +68,19 @@ export async function loadDayProblem(db: Db, userId: string, day: DayRow): Promi
   };
 }
 
-/** What is left of the day to plan: done stops are out, and the start may be where the person is now. */
+/** What is left of the day to plan: done stops are out, dropped ones are kept apart, and the start may be where the person is now. */
 export interface Remaining {
   start: LatLng;
   end: LatLng;
   startTime: number;
-  /** The stops not done yet, ready for the solver. */
+  /** The stops not done and not dropped, ready for the solver. */
   solverStages: Stage[];
+  /** Every stop not done, dropped ones too: a full calculation may take them back. */
+  candidateStages: Stage[];
+  /** Ids of the stops the last calculation left out. */
+  droppedIds: string[];
+  /** The day end time, or undefined for no limit. */
+  endTime: number | undefined;
   /** Done stop ids, in the order they had. */
   doneIds: string[];
   /** Not-done stop ids in the saved route order. */
@@ -92,11 +99,18 @@ export function remainingOf(problem: DayProblem, day: DayRow, live: LiveFrom | n
     .sort((a, b) => (a.stage.position ?? Infinity) - (b.stage.position ?? Infinity))
     .map((r) => r.stage.id);
   const isDone = new Set(done);
+  const droppedIds = problem.rows
+    .filter((r) => r.stage.dropped && !r.stage.done)
+    .map((r) => r.stage.id);
+  const isDropped = new Set(droppedIds);
   return {
     start: live ? { lat: live.lat, lng: live.lng } : problem.start,
     end: problem.end,
     startTime: live ? live.time : day.startTime,
-    solverStages: problem.solverStages.filter((s) => !isDone.has(s.id)),
+    solverStages: problem.solverStages.filter((s) => !isDone.has(s.id) && !isDropped.has(s.id)),
+    candidateStages: problem.solverStages.filter((s) => !isDone.has(s.id)),
+    droppedIds,
+    endTime: day.endTime ?? undefined,
     doneIds: done,
     savedIds: problem.savedIds.filter((id) => !isDone.has(id)),
     live,

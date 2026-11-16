@@ -42,7 +42,7 @@ export function describeRoute(
 export function stopNotes(visit: Visit, violations: Violation[]): string[] {
   const notes: string[] = [];
   for (const violation of violations) {
-    if (violation.stageId !== visit.stageId) continue;
+    if (!('stageId' in violation) || violation.stageId !== visit.stageId) continue;
     if (violation.kind === 'closed') {
       notes.push(
         `It closes before you are done: about ${Math.round(violation.minutesLate)} min over.`,
