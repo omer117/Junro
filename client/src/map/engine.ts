@@ -48,7 +48,7 @@ export interface Padding {
 export interface EngineMap {
   setMarkers(markers: MapMarker[]): void;
   /** The route as legs, each drawn in the style of how it is travelled; null clears the route. */
-  setRoute(legs: RouteLeg[] | null, options: { animate: boolean }): void;
+  setRoute(legs: RouteLeg[] | null, options: { animate: boolean; accent?: string }): void;
   /** The map's own look: 'transit' shows public transport lines faintly. */
   setBaseStyle(style: 'default' | 'transit'): void;
   /** Marks one stop as chosen (null for none). Does not move the map. */

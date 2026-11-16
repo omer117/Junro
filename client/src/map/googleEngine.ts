@@ -6,6 +6,7 @@ import { createMarkerElement, setMarkerSelected } from './markerElement';
 import { mapStyle, transitStyle } from './mapStyle';
 import { partialPath, type LatLng } from './polyline';
 
+/** Golden hour's accent: the route colour unless the trip's palette says otherwise. */
 const ROUTE_COLOUR = '#f59a4a';
 const ROUTE_OUTLINE = '#b8bdd0';
 const DRIVE_OUTLINE = '#1e1b3a';
@@ -31,6 +32,7 @@ function legLines(
   map: google.maps.Map,
   Polyline: typeof google.maps.Polyline,
   SymbolPath: typeof google.maps.SymbolPath,
+  accent: string,
 ): google.maps.Polyline[] {
   if (leg.travelled) {
     return [
@@ -55,7 +57,7 @@ function legLines(
           {
             icon: {
               path: SymbolPath.CIRCLE,
-              fillColor: ROUTE_COLOUR,
+              fillColor: accent,
               fillOpacity: 1,
               strokeColor: '#ffffff',
               strokeWeight: 1,
@@ -81,7 +83,7 @@ function legLines(
     new Polyline({
       map,
       path,
-      strokeColor: ROUTE_COLOUR,
+      strokeColor: accent,
       strokeWeight: driving ? 5 : 6,
       zIndex: 2,
     }),
@@ -181,7 +183,7 @@ async function createGoogleEngine(): Promise<MapEngine> {
             applySelection();
           },
 
-          setRoute(newLegs, { animate }) {
+          setRoute(newLegs, { animate, accent = ROUTE_COLOUR }) {
             clearRoute();
             legs = newLegs ?? [];
             const drawable = legs.filter((leg) => leg.path.length >= 2);
@@ -189,7 +191,9 @@ async function createGoogleEngine(): Promise<MapEngine> {
 
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (!animate || reduceMotion) {
-              lines = drawable.map((leg) => legLines(leg, leg.path, map, Polyline, SymbolPath));
+              lines = drawable.map((leg) =>
+                legLines(leg, leg.path, map, Polyline, SymbolPath, accent),
+              );
               return;
             }
 
@@ -217,7 +221,7 @@ async function createGoogleEngine(): Promise<MapEngine> {
                 if (progress <= 0) return;
                 const path = partialPath(leg.path, progress);
                 if (lines[i]!.length === 0) {
-                  lines[i] = legLines(leg, path, map, Polyline, SymbolPath);
+                  lines[i] = legLines(leg, path, map, Polyline, SymbolPath, accent);
                 } else {
                   for (const polyline of lines[i]!) polyline.setPath(path);
                 }
