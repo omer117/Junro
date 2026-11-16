@@ -35,7 +35,9 @@ export interface Visit {
 export type Violation =
   | { stageId: string; kind: 'closed'; minutesLate: number }
   | { stageId: string; kind: 'window_too_short' }
-  | { stageId: string; kind: 'closed_all_day' };
+  | { stageId: string; kind: 'closed_all_day' }
+  /** The day ends after the day end time, even with only the stops that must be visited. */
+  | { kind: 'past_day_end'; minutesLate: number };
 
 /** A route as the server sends it (from "Find my route", or the saved one). */
 export interface RouteResult {
@@ -47,6 +49,8 @@ export interface RouteResult {
   endArrival: number;
   violations: Violation[];
   totalLateness: number;
+  /** Ids of the stops left out because they did not fit (they are never left out silently). */
+  dropped?: string[];
   /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
   live: { lat: number; lng: number; time: number } | null;
   /**

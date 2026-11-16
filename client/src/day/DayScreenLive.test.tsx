@@ -32,6 +32,8 @@ const stage = (id: string, name: string, position: number, done = false): Stage 
   category: 'temple',
   stayOverrideMinutes: null,
   done,
+  priority: 'must',
+  dropped: false,
   position,
   place: { id: `p-${id}`, googlePlaceId: `g-${id}`, name, lat: 35.7, lng: 139.8 },
 });

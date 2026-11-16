@@ -19,6 +19,8 @@ export function RouteSummary({
   stopPlaces,
   doneStops = [],
   onToggleDone,
+  droppedStops = [],
+  onMakeMust,
 }: {
   route: RouteResult;
   day: DayFacts & {
@@ -35,11 +37,16 @@ export function RouteSummary({
   /** Stops already visited, in the order they were done. */
   doneStops?: Array<{ id: string; name: string }>;
   onToggleDone?: (stageId: string, done: boolean) => void;
+  /** Stops left out because they did not fit. */
+  droppedStops?: Array<{ id: string; name: string }>;
+  /** Makes a left-out stop a must and calculates the day again. */
+  onMakeMust?: (stageId: string) => void;
 }) {
   // After a replan mid-day the route starts where the person was, at that time.
   const startTime = route.live ? route.live.time : day.startTime;
   const startName = route.live ? 'Your location' : (day.startName ?? 'Start');
   const { headline, detail } = describeRoute({ ...day, startTime }, route);
+  const pastDayEnd = route.violations.find((v) => v.kind === 'past_day_end');
 
   // The leg after each place of the route (start, every stop in order): how you get to the next.
   const names = [
@@ -120,6 +127,13 @@ export function RouteSummary({
     <section className="route-summary" aria-label="Your route">
       <h2>{headline}</h2>
       <p className="route-summary__detail">{detail}</p>
+      {pastDayEnd && pastDayEnd.kind === 'past_day_end' && (
+        <p className="route-summary__note route-summary__note--warn">
+          <CircleAlert size={16} aria-hidden="true" />
+          The day ends {formatDuration(pastDayEnd.minutesLate)} after the time you wanted the day to
+          end.
+        </p>
+      )}
       {route.transitAvailable === false && (
         <p role="status" className="route-summary__note">
           Public transport is not available for these places, so every leg is on foot. Google does
@@ -179,6 +193,29 @@ export function RouteSummary({
           <span className="timeline__time">{formatClock(route.endArrival)}</span>
         </li>
       </ol>
+      {droppedStops.length > 0 && (
+        <section className="dropped-stops" aria-labelledby="dropped-heading">
+          <h3 id="dropped-heading">Didn&apos;t fit today</h3>
+          <p>Left out to keep the rest on time.</p>
+          <ul>
+            {droppedStops.map((stop) => (
+              <li key={stop.id}>
+                <span>{stop.name}</span>
+                {onMakeMust && (
+                  <button
+                    type="button"
+                    className="timeline__toggle"
+                    aria-label={`Make ${stop.name} a must`}
+                    onClick={() => onMakeMust(stop.id)}
+                  >
+                    Make it a must
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </section>
   );
 }

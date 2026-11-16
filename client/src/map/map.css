@@ -59,6 +59,13 @@
   box-shadow: var(--shadow-float);
 }
 
+/* A stop that did not fit today: hollow with a dashed edge (and the words in its label). */
+.map-marker--dropped {
+  background: var(--surface);
+  color: var(--ink-muted);
+  border: 2px dashed var(--ink-muted);
+}
+
 /* A stop with a problem. The colour is backed by the warning text and icon in the timeline. */
 .map-marker--done {
   background: var(--line);

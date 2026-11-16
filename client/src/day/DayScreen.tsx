@@ -43,6 +43,23 @@ const ANIMATION_MS = 2000;
 /** A wait at a stop longer than this is flagged on the map, like a problem. */
 const NOTABLE_WAIT_MINUTES = 5;
 
+const PRIORITIES: Array<{ value: 'must' | 'optional'; label: string }> = [
+  { value: 'must', label: 'Must' },
+  { value: 'optional', label: 'If time' },
+];
+
+/** "09:30" as minutes since midnight. */
+function minutesOf(time: string): number {
+  const [hours = 0, minutes = 0] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+/** Minutes since midnight as "09:30", for a time input. */
+function timeOf(minutes: number): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(Math.floor(minutes / 60) % 24)}:${pad(minutes % 60)}`;
+}
+
 const MODES: Array<{ value: TravelMode; label: string }> = [
   { value: 'walking', label: 'Walking' },
   { value: 'driving', label: 'Driving' },
@@ -90,6 +107,12 @@ export function DayScreen() {
   const [editing, setEditing] = useState(false);
   const [animate, setAnimate] = useState(false);
   const [locating, setLocating] = useState(false);
+  // The day end time as typed; it follows the saved value when that changes.
+  const [endTimeText, setEndTimeText] = useState('');
+  const savedEndTime = day.data?.endTime;
+  useEffect(() => {
+    setEndTimeText(savedEndTime != null ? timeOf(savedEndTime) : '');
+  }, [savedEndTime]);
   const [locationProblem, setLocationProblem] = useState<string | null>(null);
   const wide = useMediaQuery(WIDE_SCREEN);
 
@@ -103,7 +126,9 @@ export function DayScreen() {
   const stages = useMemo(() => inRouteOrder(stagesQuery.data ?? []), [stagesQuery.data]);
   const savedRoute = route.data ?? null;
   // Numbers on the map mean a route exists: every stop has a place in it.
-  const hasRoute = stages.length > 0 && stages.every((stage) => stage.position !== null);
+  // Stops that were left out have no place in the route (and are listed on their own).
+  const routed = useMemo(() => stages.filter((stage) => !stage.dropped), [stages]);
+  const hasRoute = routed.length > 0 && routed.every((stage) => stage.position !== null);
 
   const stopPlaces = useMemo(
     () =>
@@ -129,7 +154,9 @@ export function DayScreen() {
     if (!day.data) return [];
     // A stop is flagged on the map when it has a problem or a long wait.
     const flagged = new Set<string>();
-    for (const violation of savedRoute?.violations ?? []) flagged.add(violation.stageId);
+    for (const violation of savedRoute?.violations ?? []) {
+      if ('stageId' in violation) flagged.add(violation.stageId);
+    }
     for (const visit of savedRoute?.visits ?? []) {
       if (visit.waited >= NOTABLE_WAIT_MINUTES) flagged.add(visit.stageId);
     }
@@ -140,13 +167,14 @@ export function DayScreen() {
         position: day.data.start,
         label: `Start · ${formatClock(day.data.startTime)}`,
       },
-      ...stages.map((stage, index): MapMarker => ({
+      ...stages.map((stage): MapMarker => ({
         id: stage.id,
         kind: 'stage',
         position: { lat: stage.place.lat, lng: stage.place.lng },
         name: stage.place.name,
         category: stage.category,
-        ...(hasRoute ? { number: index + 1 } : {}),
+        ...(hasRoute && !stage.dropped ? { number: routed.indexOf(stage) + 1 } : {}),
+        ...(stage.dropped ? { dropped: true } : {}),
         ...(flagged.has(stage.id) ? { warning: true } : {}),
         ...(stage.done ? { done: true } : {}),
       })),
@@ -157,7 +185,7 @@ export function DayScreen() {
         label: `End · ${day.data.endName ?? 'end'}`,
       },
     ];
-  }, [day.data, stages, hasRoute, savedRoute]);
+  }, [day.data, stages, routed, hasRoute, savedRoute]);
 
   if (day.isPending) return <p role="status">Loading the day…</p>;
   if (day.isError || !day.data) {
@@ -225,6 +253,9 @@ export function DayScreen() {
   const problem = addProblem ?? (solve.isError ? solveProblem(solve.error) : null);
 
   const showSummary = savedRoute !== null && !editing;
+  const droppedStops = stages
+    .filter((stage) => stage.dropped)
+    .map((stage) => ({ id: stage.id, name: stage.place.name }));
   const doneStops = stages
     .filter((stage) => stage.done)
     .map((stage) => ({ id: stage.id, name: stage.place.name }));
@@ -232,7 +263,7 @@ export function DayScreen() {
   // Some stops have their place in a route and some do not: stops were added to a day that
   // already had a route. The person chooses how to fit them in.
   const placed = stages.filter((stage) => stage.position !== null).length;
-  const added = stages.length - placed;
+  const added = stages.filter((stage) => stage.position === null && !stage.dropped).length;
   const partlyRouted = placed > 0 && added > 0;
 
   return (
@@ -279,6 +310,41 @@ export function DayScreen() {
           onChange={(mode) => updateDay.mutate({ travelMode: mode })}
         />
 
+        <div className="day-end">
+          <label htmlFor="day-end-time">Day ends at (optional)</label>
+          <input
+            id="day-end-time"
+            type="time"
+            value={endTimeText}
+            onChange={(event) => {
+              setEndTimeText(event.target.value);
+              // A time input only sends a complete, valid time; an unfinished one is empty.
+              if (event.target.value !== '') {
+                updateDay.mutate({ endTime: minutesOf(event.target.value) });
+              }
+            }}
+          />
+          {day.data.endTime != null && (
+            <button
+              type="button"
+              className="button button--outline"
+              onClick={() => {
+                setEndTimeText('');
+                updateDay.mutate({ endTime: null });
+              }}
+            >
+              No end time
+            </button>
+          )}
+        </div>
+        {updateDay.isError && (
+          <p role="alert">
+            {updateDay.error instanceof ApiError && updateDay.error.code === 'validation_error'
+              ? 'The day must end after it starts.'
+              : 'Could not change the day. Try again.'}
+          </p>
+        )}
+
         {problem && <p role="alert">{problem}</p>}
 
         {showSummary ? (
@@ -304,6 +370,10 @@ export function DayScreen() {
               stopPlaces={stopPlaces}
               dayId={day.data.id}
               doneStops={doneStops}
+              droppedStops={droppedStops}
+              onMakeMust={(id) =>
+                updateStage.mutate({ id, priority: 'must' }, { onSuccess: () => findRoute('full') })
+              }
               onToggleDone={(id, done) => updateStage.mutate({ id, done })}
             />
             {day.data.date === todayString() && (
@@ -380,6 +450,13 @@ export function DayScreen() {
                   <li key={stage.id}>
                     <CategoryIcon category={stage.category} />
                     <span className="stop-list__name">{stage.place.name}</span>
+                    <RadioChips
+                      label={`Priority for ${stage.place.name}`}
+                      className="priority-chips"
+                      options={PRIORITIES}
+                      value={stage.priority}
+                      onChange={(priority) => updateStage.mutate({ id: stage.id, priority })}
+                    />
                     <select
                       aria-label={`Category for ${stage.place.name}`}
                       value={stage.category}

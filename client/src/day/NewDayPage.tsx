@@ -68,6 +68,7 @@ export function NewDayPage() {
   const [end, setEnd] = useState<Place | null>(null);
   const [sameEnd, setSameEnd] = useState(true);
   const [time, setTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('');
   const [mode, setMode] = useState<TravelMode>('walking');
   const [problems, setProblems] = useState<string[]>([]);
 
@@ -77,6 +78,9 @@ export function NewDayPage() {
     if (!date) found.push('Choose a date.');
     if (!start) found.push('Choose where the day starts.');
     if (!sameEnd && !end) found.push('Choose where the day ends.');
+    if (endTime !== '' && minutesOf(endTime) <= minutesOf(time)) {
+      found.push('The day must end after it starts.');
+    }
     setProblems(found);
     if (found.length > 0 || !start) return;
 
@@ -91,6 +95,7 @@ export function NewDayPage() {
         startPlaceId: start.googlePlaceId,
         endPlaceId: finish.googlePlaceId,
         startTime: minutesOf(time),
+        ...(endTime !== '' ? { endTime: minutesOf(endTime) } : {}),
         travelMode: mode,
       },
       { onSuccess: (day) => navigate(`/days/${day.id}`) },
@@ -136,6 +141,14 @@ export function NewDayPage() {
 
         <label htmlFor="day-time">Start time</label>
         <input id="day-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+
+        <label htmlFor="day-end-time">Day ends at (optional)</label>
+        <input
+          id="day-end-time"
+          type="time"
+          value={endTime}
+          onChange={(e) => setEndTime(e.target.value)}
+        />
 
         <fieldset className="new-day__mode">
           <legend>Travel mode</legend>
