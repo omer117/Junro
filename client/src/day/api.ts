@@ -52,6 +52,10 @@ export function useUpdateStage(dayId: string) {
       category?: Category;
       done?: boolean;
       priority?: 'must' | 'optional';
+      /** Move to another day of the same stay, or back to the pool (null). */
+      dayId?: string | null;
+      /** Booked time in minutes since midnight; null removes the booking. */
+      pinnedTime?: number | null;
     }) => api<Stage>(`/stages/${id}`, { method: 'PATCH', body: change }),
     onSuccess: refresh,
   });

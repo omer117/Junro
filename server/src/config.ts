@@ -1,10 +1,12 @@
 import type { QuotaCaps } from './google/guard.js';
 
-export interface GoogleConfig {
+/** One sign-in provider's OAuth app: where it is registered and where it sends the person back. */
+export interface OAuthConfig {
   clientId: string;
   clientSecret: string;
   callbackUrl: string;
 }
+export type GoogleConfig = OAuthConfig;
 
 export const DEFAULT_QUOTA_CAPS: QuotaCaps = {
   // Google's free monthly tiers are 10,000 (Essentials), 5,000 (Pro) and 1,000 (Enterprise)
@@ -26,9 +28,14 @@ export interface Config {
   clientUrl: string;
   secureCookies: boolean;
   google: GoogleConfig | undefined;
+  github: OAuthConfig | undefined;
+  /** Personal Microsoft accounts only. */
+  microsoft: OAuthConfig | undefined;
   /** Server-side key for Places and Routes. Never sent to the browser. */
   googleApiKey: string | undefined;
   quotaCaps: QuotaCaps;
+  /** Where Redis is. Missing means no Redis: everything works the same, just without it. */
+  redisUrl: string | undefined;
 }
 
 /** Reads settings from environment variables. Secrets live here and nowhere else. */
@@ -39,11 +46,21 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     return value;
   };
 
-  const googleNames = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_CALLBACK_URL'] as const;
-  const googleSet = googleNames.filter((name) => env[name]);
-  if (googleSet.length !== 0 && googleSet.length !== googleNames.length) {
-    throw new Error(`Set all of ${googleNames.join(', ')} or none of them`);
-  }
+  // Each provider is all-or-none: three settings, or none (then it is simply not offered).
+  const oauth = (prefix: string): OAuthConfig | undefined => {
+    const names = [`${prefix}_CLIENT_ID`, `${prefix}_CLIENT_SECRET`, `${prefix}_CALLBACK_URL`];
+    const set = names.filter((name) => env[name]);
+    if (set.length !== 0 && set.length !== names.length) {
+      throw new Error(`Set all of ${names.join(', ')} or none of them`);
+    }
+    return set.length === 0
+      ? undefined
+      : {
+          clientId: required(names[0]!),
+          clientSecret: required(names[1]!),
+          callbackUrl: required(names[2]!),
+        };
+  };
 
   const cap = (name: string, fallback: number): number => {
     const raw = env[name];
@@ -59,6 +76,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     clientUrl: env.CLIENT_URL ?? 'http://localhost:5173',
     secureCookies: env.NODE_ENV === 'production',
     googleApiKey: env.GOOGLE_API_KEY || undefined,
+    redisUrl: env.REDIS_URL || undefined,
     quotaCaps: {
       autocomplete: cap('GOOGLE_CAP_AUTOCOMPLETE', DEFAULT_QUOTA_CAPS.autocomplete),
       placeDetails: cap('GOOGLE_CAP_PLACE_DETAILS', DEFAULT_QUOTA_CAPS.placeDetails),
@@ -67,13 +85,8 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       transitMatrix: cap('GOOGLE_CAP_TRANSIT_MATRIX', DEFAULT_QUOTA_CAPS.transitMatrix),
       transitRoutes: cap('GOOGLE_CAP_TRANSIT_ROUTES', DEFAULT_QUOTA_CAPS.transitRoutes),
     },
-    google:
-      googleSet.length === 0
-        ? undefined
-        : {
-            clientId: required('GOOGLE_CLIENT_ID'),
-            clientSecret: required('GOOGLE_CLIENT_SECRET'),
-            callbackUrl: required('GOOGLE_CALLBACK_URL'),
-          },
+    google: oauth('GOOGLE'),
+    github: oauth('GITHUB'),
+    microsoft: oauth('MICROSOFT'),
   };
 }

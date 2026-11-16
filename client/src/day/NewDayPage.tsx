@@ -8,13 +8,13 @@ import { useCreateDay } from './api';
 import './day.css';
 
 /** "09:30" as minutes since midnight. */
-function minutesOf(time: string): number {
+export function minutesOf(time: string): number {
   const [hours = 0, minutes = 0] = time.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
 /** A place that has been chosen, with a way to choose another. Otherwise the search. */
-function PlaceField({
+export function PlaceField({
   question,
   changeLabel,
   place,

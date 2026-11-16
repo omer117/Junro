@@ -314,3 +314,105 @@
     padding-inline: max(var(--gutter), calc((100% - 72rem) / 2));
   }
 }
+
+/* Choosing how to sign in: a bottom sheet on a phone, a centred dialog on a computer */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(30 27 58 / 0.5);
+}
+
+.sign-in-sheet {
+  display: grid;
+  gap: var(--space-4);
+  width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-5) var(--space-6);
+  background: var(--surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-float);
+}
+
+.sign-in-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sign-in-sheet__head h2,
+.sign-in-sheet p {
+  margin: 0;
+}
+
+.sign-in-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sign-in-sheet__list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sign-in-sheet__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 3rem;
+  padding: 0 var(--space-4);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sign-in-sheet__button:hover {
+  background: var(--ground);
+}
+
+.sign-in-sheet__warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--ground);
+  color: var(--warning-text);
+  font-weight: 600;
+}
+
+.sign-in-sheet__note {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 40rem) {
+  .sheet-backdrop {
+    align-items: center;
+  }
+
+  .sign-in-sheet {
+    width: 26rem;
+    border-radius: var(--radius-lg);
+  }
+}

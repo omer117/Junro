@@ -45,6 +45,17 @@ function setup(
     vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? 'GET';
       requests.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (url === '/api/auth/identities') {
+        return json(200, [
+          {
+            id: 'i1',
+            provider: 'google',
+            email: 'ann@example.com',
+            createdAt: '2026-11-01T00:00:00Z',
+          },
+        ]);
+      }
+      if (url === '/api/auth/providers') return json(200, { providers: ['google'] });
       if (url === '/api/me/stay-durations' && method === 'GET') {
         return (options.list ?? (() => json(200, listOf(options.preferences))))();
       }

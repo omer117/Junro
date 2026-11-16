@@ -452,3 +452,9 @@
   min-height: var(--tap);
   font-weight: 600;
 }
+
+.trips-home__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

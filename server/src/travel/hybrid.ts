@@ -1,8 +1,8 @@
 import type { LatLng, TravelTimeFn } from '@junro/solver';
-import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { routeMatrixCache } from '../db/schema.js';
 import type { MapsClient } from '../google/types.js';
+import type { RedisHandle } from '../redis.js';
+import { readMatrix, readMatrixFromDb, writeMatrix } from './matrix-cache.js';
 import { loadTravelTimes, readCachedTravelTimes } from './matrix.js';
 
 /** Closer than this on foot (minutes) and public transport is not even asked about. */
@@ -80,6 +80,7 @@ export function legsOf(route: LatLng[], times: HybridTimes): Leg[] {
  */
 export async function loadHybridTimes(args: {
   db: Db;
+  redis?: RedisHandle | undefined;
   maps: MapsClient;
   dayId: string;
   points: LatLng[];
@@ -87,15 +88,31 @@ export async function loadHybridTimes(args: {
   departureTime: string;
   walkEnough?: number;
 }): Promise<HybridTimes> {
-  const { db, maps, dayId, departureTime } = args;
+  const { db, redis, maps, dayId, departureTime } = args;
   const walkEnough = args.walkEnough ?? WALK_ENOUGH_MINUTES;
   const slot = slotOf(departureTime);
 
-  const walk = await loadTravelTimes({ db, maps, dayId, mode: 'walking', points: args.points });
+  const walk = await loadTravelTimes({
+    db,
+    redis,
+    maps,
+    dayId,
+    mode: 'walking',
+    points: args.points,
+  });
   const unique = uniquePoints(args.points);
 
   const seconds = new Map<string, number>();
-  const stored = await loadTransit(db, dayId, slot, seconds);
+  const transitKnown = () =>
+    unique.every((from) =>
+      unique.every(
+        (to) =>
+          pointKey(from) === pointKey(to) ||
+          walk(from, to, 0) <= walkEnough ||
+          seconds.has(`${pointKey(from)}|${pointKey(to)}`),
+      ),
+    );
+  const stored = await loadTransit(db, redis, dayId, slot, seconds, transitKnown);
 
   for (const from of unique) {
     const missing = unique.filter(
@@ -113,7 +130,7 @@ export async function loadHybridTimes(args: {
       departureTime,
     });
     missing.forEach((to, j) => seconds.set(`${pointKey(from)}|${pointKey(to)}`, result[0]![j]!));
-    await saveTransit(db, dayId, slot, seconds, stored, unique.map(pointKey));
+    await saveTransit(db, redis, dayId, slot, seconds, stored, unique.map(pointKey));
   }
 
   return combine(walk, seconds);
@@ -125,6 +142,7 @@ export async function loadHybridTimes(args: {
  */
 export async function readCachedHybridTimes(args: {
   db: Db;
+  redis?: RedisHandle | undefined;
   dayId: string;
   points: LatLng[];
   departureTime: string;
@@ -133,6 +151,7 @@ export async function readCachedHybridTimes(args: {
   const walkEnough = args.walkEnough ?? WALK_ENOUGH_MINUTES;
   const walk = await readCachedTravelTimes({
     db: args.db,
+    redis: args.redis,
     dayId: args.dayId,
     mode: 'walking',
     points: args.points,
@@ -140,16 +159,25 @@ export async function readCachedHybridTimes(args: {
   if (!walk) return null;
 
   const seconds = new Map<string, number>();
-  await loadTransit(args.db, args.dayId, slotOf(args.departureTime), seconds);
-
   const unique = uniquePoints(args.points);
-  for (const from of unique) {
-    for (const to of unique) {
-      if (pointKey(from) === pointKey(to) || walk(from, to, 0) <= walkEnough) continue;
-      if (!seconds.has(`${pointKey(from)}|${pointKey(to)}`)) return null;
-    }
-  }
-  return combine(walk, seconds);
+  const transitKnown = () =>
+    unique.every((from) =>
+      unique.every(
+        (to) =>
+          pointKey(from) === pointKey(to) ||
+          walk(from, to, 0) <= walkEnough ||
+          seconds.has(`${pointKey(from)}|${pointKey(to)}`),
+      ),
+    );
+  await loadTransit(
+    args.db,
+    args.redis,
+    args.dayId,
+    slotOf(args.departureTime),
+    seconds,
+    transitKnown,
+  );
+  return transitKnown() ? combine(walk, seconds) : null;
 }
 
 function uniquePoints(points: LatLng[]): LatLng[] {
@@ -158,28 +186,44 @@ function uniquePoints(points: LatLng[]): LatLng[] {
   return [...seen.values()];
 }
 
-/** Fills `into` with what is stored for this hour. Another hour's times are not used. */
+/**
+ * Fills `into` with what is stored for this hour. Another hour's times are not used.
+ * Like the walking matrix: a Redis copy can be behind, so when it lacks something that is needed
+ * (or holds another hour), Postgres is read before Google is asked.
+ */
 async function loadTransit(
   db: Db,
+  redis: RedisHandle | undefined,
   dayId: string,
   slot: string,
   into: Map<string, number>,
+  complete: () => boolean,
 ): Promise<string[]> {
-  const [row] = await db
-    .select()
-    .from(routeMatrixCache)
-    .where(and(eq(routeMatrixCache.dayId, dayId), eq(routeMatrixCache.travelMode, 'transit')));
-  if (!row) return [];
-  const stored = row.matrix as StoredTransit;
-  if (stored.slot !== slot) return [];
-  for (const [from, to, value] of stored.entries) {
-    into.set(`${stored.points[from]}|${stored.points[to]}`, value ?? Infinity);
+  const found = await readMatrix(db, redis, dayId, 'transit');
+  if (!found) return [];
+
+  const use = (stored: StoredTransit): string[] => {
+    if (stored.slot !== slot) return [];
+    for (const [from, to, value] of stored.entries) {
+      into.set(`${stored.points[from]}|${stored.points[to]}`, value ?? Infinity);
+    }
+    return stored.points;
+  };
+
+  let points = use(found.matrix as StoredTransit);
+  if (found.fromRedis && !complete()) {
+    const truth = await readMatrixFromDb(db, dayId, 'transit');
+    if (truth) {
+      into.clear();
+      points = use(truth as StoredTransit);
+    }
   }
-  return stored.points;
+  return points;
 }
 
 async function saveTransit(
   db: Db,
+  redis: RedisHandle | undefined,
   dayId: string,
   slot: string,
   seconds: Map<string, number>,
@@ -201,11 +245,5 @@ async function saveTransit(
   }
 
   const matrix: StoredTransit = { slot, points, entries };
-  await db
-    .insert(routeMatrixCache)
-    .values({ dayId, travelMode: 'transit', inputHash: slot, matrix })
-    .onConflictDoUpdate({
-      target: [routeMatrixCache.dayId, routeMatrixCache.travelMode],
-      set: { inputHash: slot, matrix },
-    });
+  await writeMatrix(db, redis, dayId, 'transit', slot, matrix);
 }

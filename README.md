@@ -113,7 +113,8 @@ npm run db:migrate -w @junro/server
 npm run dev -w @junro/server      # http://localhost:3000/health
 ```
 
-`npm test` also needs the database from `docker compose`.
+`npm test` also needs the database and Redis from `docker compose` (Redis on port 6380;
+`TEST_REDIS_URL` in `.env.example`). The server itself works without Redis: leave `REDIS_URL` out.
 
 ### Google sign-in (optional locally)
 
@@ -121,6 +122,30 @@ npm run dev -w @junro/server      # http://localhost:3000/health
 2. Add `http://localhost:3000/auth/google/callback` as an authorised redirect URI.
 3. Put the client ID and secret in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `GOOGLE_CALLBACK_URL`). Without them the server runs, and `/auth/google` answers 503.
+
+### GitHub and Microsoft sign-in (optional)
+
+One person keeps one Junro account whichever way they sign in. A new provider is attached to an
+existing account only when the email is verified on both sides; otherwise the person is told to
+sign in the way they did before and connect the new one in Settings. Neither provider is offered
+unless all three of its settings are present.
+
+- **GitHub:** Settings, Developer settings, OAuth Apps, New OAuth App. Homepage URL: your site.
+  Authorization callback URL: `http://localhost:3000/auth/github/callback` locally, and
+  `https://<your-domain>/api/auth/github/callback` in production (one app per address). Put the
+  client ID and a generated client secret in `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and
+  `GITHUB_CALLBACK_URL`. The app asks for the `user:email` scope, and only a primary, verified
+  email is accepted.
+- **Microsoft (personal accounts only):** in the Azure portal, Microsoft Entra ID, App
+  registrations, New registration. Supported account types: **Personal Microsoft accounts only**.
+  Redirect URI (type Web): `http://localhost:3000/auth/microsoft/callback` locally and
+  `https://<your-domain>/api/auth/microsoft/callback` in production. Under Certificates & secrets
+  create a client secret, and put the application (client) ID, the secret value and the redirect
+  URI in `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` and `MICROSOFT_CALLBACK_URL`. Work and
+  school accounts are refused on purpose: their email claim can be set by a tenant admin and is
+  not proof of ownership.
+- Sign in with Apple is not offered: it needs the paid Apple Developer Program and hides real
+  emails behind relay addresses, which breaks email linking.
 
 ## Google Maps Platform (places and routes)
 
@@ -271,6 +296,25 @@ Sources and credits:
   `/etc/junro.env` on the VM and are never in the repository: `NODE_ENV=production`, `PORT`,
   `DATABASE_URL`, `SESSION_SECRET`, `CLIENT_URL`, the three `GOOGLE_*` sign-in variables and
   `GOOGLE_API_KEY`.
+- **Redis (optional, on the same VM):** a shared rate limiter (atomic counters) and a fast copy of
+  the route-matrix cache. Postgres stays the source of truth and the Google usage counter stays
+  in Postgres, so if Redis is down or `REDIS_URL` is not set the app works the same, just without
+  it. `/health` reports `redis: up | down | off`.
+
+  ```bash
+  sudo apt install redis-server          # needs Redis 7 or later (Ubuntu 24.04 has 7.0)
+  sudo nano /etc/redis/redis.conf
+  ```
+
+  In `redis.conf`: `bind 127.0.0.1 ::1`, `protected-mode yes`, `requirepass <a long random
+password>`, `maxmemory 64mb`, `maxmemory-policy allkeys-lru`, `save ""` and `appendonly no` (it
+  is a cache: nothing is written to disk and the oldest keys are dropped when it is full). Then
+  `sudo systemctl restart redis-server`. Never open port 6379 in the Oracle security list or the
+  VM firewall. Add `REDIS_URL=redis://:<password>@127.0.0.1:6379` to `/etc/junro.env` and restart
+  Junro. `deploy/junro.service` lists Redis with `Wants=`, not `Requires=`, so Junro still starts
+  without it. Look at how well the cache works with `redis-cli INFO stats` (`keyspace_hits`,
+  `keyspace_misses`).
+
 - **Sign-in:** in Google Cloud add `https://<your-domain>/api/auth/google/callback` as an
   authorised redirect URI and the domain as a JavaScript origin, and put the same callback URL
   in `GOOGLE_CALLBACK_URL`.

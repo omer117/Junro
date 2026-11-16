@@ -87,7 +87,7 @@ export function placesRouter({
       return;
     }
 
-    if (!searchLimiter.allow(req.user!.id)) {
+    if (!(await searchLimiter.allow(req.user!.id))) {
       throw new HttpError(429, 'rate_limited', 'Too many searches. Wait a moment and try again.');
     }
 
@@ -128,7 +128,7 @@ export function placesRouter({
       return;
     }
 
-    if (!placeLimiter.allow(req.user!.id)) {
+    if (!(await placeLimiter.allow(req.user!.id))) {
       throw new HttpError(429, 'rate_limited', 'Too many new places. Wait a moment and try again.');
     }
 

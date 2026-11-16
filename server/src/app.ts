@@ -1,21 +1,26 @@
 import express, { type Express } from 'express';
 import session from 'express-session';
-import { DEFAULT_QUOTA_CAPS, type GoogleConfig } from './config.js';
+import { DEFAULT_QUOTA_CAPS, type OAuthConfig } from './config.js';
 import type { Db } from './db/client.js';
 import { authRoutes } from './auth/routes.js';
-import { createPassport } from './auth/passport.js';
+import { createPassport, type PassportOptions } from './auth/passport.js';
+import type { ProviderName } from './auth/providers.js';
 import { errorHandler, notFound } from './errors.js';
 import { withUsageGuard } from './google/guarded.js';
 import { createUsageGuard, type QuotaCaps } from './google/guard.js';
 import type { MapsClient } from './google/types.js';
-import { createRateLimiter } from './rate-limit.js';
+import { createRateLimiter, createRedisRateLimiter, type RateLimiter } from './rate-limit.js';
 import { placesRouter } from './routes/places.js';
 import { airportsRouter } from './routes/airports.js';
 import { daysRouter } from './routes/days.js';
 import { legsRouter } from './routes/legs.js';
 import { routeRouter } from './routes/route.js';
+import { segmentsRouter } from './routes/segments.js';
+import { splitRouter } from './routes/split.js';
+import type { SplitRunner } from './split/split-job.js';
 import { solveRouter } from './routes/solve.js';
 import { stagesRouter } from './routes/stages.js';
+import type { RedisHandle } from './redis.js';
 import { stayDurationsRouter } from './routes/stay-durations.js';
 import { tripsRouter } from './routes/trips.js';
 
@@ -25,22 +30,47 @@ export interface AppDeps {
   /** Where sessions are kept. Defaults to memory (fine for tests, not for production). */
   sessionStore?: session.Store;
   secureCookies?: boolean;
-  google?: GoogleConfig;
+  google?: OAuthConfig;
+  github?: OAuthConfig;
+  /** Personal Microsoft accounts only. */
+  microsoft?: OAuthConfig;
+  /** Tests: stand-ins for a provider's strategy, and a ready Microsoft configuration. */
+  authTestHooks?: Pick<PassportOptions, 'strategies' | 'microsoftConfiguration'>;
   clientUrl?: string;
   /** Google (Places and Routes). Missing = no API key, and Google features answer 503. */
   maps?: MapsClient;
   quotaCaps?: QuotaCaps;
+  /** Redis for the rate limiter and the matrix cache. Missing = no Redis. */
+  redis?: RedisHandle;
   /** Place searches allowed per user per minute. */
   searchRateLimit?: number;
   /** New places (Place Details fetches) allowed per user per minute. */
   placeRateLimit?: number;
   /** Solves allowed per user per minute. */
   solveRateLimit?: number;
+  /** Splits of a stay allowed per user per minute. */
+  splitRateLimit?: number;
+  /** How a split is run. Defaults to a worker thread; tests run it inline. */
+  splitRunner?: SplitRunner;
   /** Lets tests mount extra routes after sign-in is set up and before the real routes. */
   beforeRoutes?: (app: Express) => void;
 }
 
 export function createApp(deps: AppDeps): Express {
+  // One limiter per job. With Redis the count is shared and survives a restart; the in-memory
+  // limiter is the fallback, and the whole answer when there is no Redis.
+  const limiter = (name: string, limit: number): RateLimiter => {
+    const local = createRateLimiter({ limit, windowMs: 60_000 });
+    return deps.redis
+      ? createRedisRateLimiter({
+          redis: deps.redis,
+          name,
+          limit,
+          windowMs: 60_000,
+          fallback: local,
+        })
+      : local;
+  };
   const app = express();
   // In production a proxy (Vercel) sits in front and talks plain http to this server. Trusting
   // its X-Forwarded-Proto header lets express-session see that the browser used https, which
@@ -68,21 +98,34 @@ export function createApp(deps: AppDeps): Express {
   const guard = createUsageGuard({ db: deps.db, caps: deps.quotaCaps ?? DEFAULT_QUOTA_CAPS });
   const maps = deps.maps ? withUsageGuard(deps.maps, guard) : undefined;
 
-  const passport = createPassport(deps.db, deps.google);
+  const { passport, prepare } = createPassport(deps.db, {
+    google: deps.google,
+    github: deps.github,
+    microsoft: deps.microsoft,
+    ...deps.authTestHooks,
+  });
+  const enabled = new Set<ProviderName>();
+  if (deps.google || deps.authTestHooks?.strategies?.google) enabled.add('google');
+  if (deps.github || deps.authTestHooks?.strategies?.github) enabled.add('github');
+  if (deps.microsoft || deps.authTestHooks?.strategies?.microsoft) enabled.add('microsoft');
   app.use(passport.initialize());
   app.use(passport.session());
 
   deps.beforeRoutes?.(app);
 
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
+    // Redis down is not a reason to fail the health check: the app works without it.
+    const redis = !deps.redis ? 'off' : deps.redis.isReady ? 'up' : 'down';
+    res.json({ status: 'ok', redis });
   });
 
   app.use(
     '/auth',
     authRoutes({
+      db: deps.db,
       passport,
-      googleEnabled: deps.google !== undefined,
+      prepare,
+      enabled,
       clientUrl: deps.clientUrl ?? '/',
     }),
   );
@@ -94,24 +137,41 @@ export function createApp(deps: AppDeps): Express {
     placesRouter({
       db: deps.db,
       maps,
-      searchLimiter: createRateLimiter({ limit: deps.searchRateLimit ?? 30, windowMs: 60_000 }),
-      placeLimiter: createRateLimiter({ limit: deps.placeRateLimit ?? 20, windowMs: 60_000 }),
+      searchLimiter: limiter('search', deps.searchRateLimit ?? 30),
+      placeLimiter: limiter('place', deps.placeRateLimit ?? 20),
     }),
   );
   app.use(daysRouter(deps.db));
-  app.use(routeRouter(deps.db));
+  app.use(routeRouter(deps.db, deps.redis));
   app.use(
     solveRouter({
       db: deps.db,
+      redis: deps.redis,
       maps,
-      limiter: createRateLimiter({ limit: deps.solveRateLimit ?? 10, windowMs: 60_000 }),
+      limiter: limiter('solve', deps.solveRateLimit ?? 10),
     }),
   );
   app.use(
     legsRouter({
       db: deps.db,
       maps,
-      limiter: createRateLimiter({ limit: deps.solveRateLimit ?? 10, windowMs: 60_000 }),
+      limiter: limiter('legs', deps.solveRateLimit ?? 10),
+    }),
+  );
+  app.use(segmentsRouter(deps.db));
+  app.use(
+    splitRouter({
+      db: deps.db,
+      limiter: createRateLimiter({ limit: deps.splitRateLimit ?? 5, windowMs: 60_000 }),
+      ...(deps.splitRunner ? { runner: deps.splitRunner } : {}),
+    }),
+  );
+  app.use(segmentsRouter(deps.db));
+  app.use(
+    splitRouter({
+      db: deps.db,
+      limiter: createRateLimiter({ limit: deps.splitRateLimit ?? 5, windowMs: 60_000 }),
+      ...(deps.splitRunner ? { runner: deps.splitRunner } : {}),
     }),
   );
   app.use(stagesRouter(deps.db));

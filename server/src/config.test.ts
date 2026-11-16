@@ -17,6 +17,14 @@ describe('loadConfig', () => {
     });
   });
 
+  it('has no Redis unless REDIS_URL is set (an empty value counts as not set)', () => {
+    expect(loadConfig(base).redisUrl).toBeUndefined();
+    expect(loadConfig({ ...base, REDIS_URL: '' }).redisUrl).toBeUndefined();
+    expect(loadConfig({ ...base, REDIS_URL: 'redis://localhost:6380' }).redisUrl).toBe(
+      'redis://localhost:6380',
+    );
+  });
+
   it.each(['DATABASE_URL', 'SESSION_SECRET'])('fails when %s is missing', (name) => {
     const env: Record<string, string> = { ...base };
     delete env[name];
@@ -41,6 +49,32 @@ describe('loadConfig', () => {
 
   it('fails when only some of the Google values are set', () => {
     expect(() => loadConfig({ ...base, GOOGLE_CLIENT_ID: 'id' })).toThrow(/GOOGLE/);
+  });
+
+  it.each(['GITHUB', 'MICROSOFT'])('turns on %s sign-in when all three values are set', (name) => {
+    const config = loadConfig({
+      ...base,
+      [`${name}_CLIENT_ID`]: 'id',
+      [`${name}_CLIENT_SECRET`]: 'secret',
+      [`${name}_CALLBACK_URL`]: `http://localhost:3000/auth/${name.toLowerCase()}/callback`,
+    });
+
+    expect(config[name.toLowerCase() as 'github' | 'microsoft']).toEqual({
+      clientId: 'id',
+      clientSecret: 'secret',
+      callbackUrl: `http://localhost:3000/auth/${name.toLowerCase()}/callback`,
+    });
+  });
+
+  it.each(['GITHUB', 'MICROSOFT'])('fails when only some of the %s values are set', (name) => {
+    expect(() => loadConfig({ ...base, [`${name}_CLIENT_ID`]: 'id' })).toThrow(new RegExp(name));
+  });
+
+  it('offers no extra provider unless it is configured', () => {
+    const config = loadConfig(base);
+
+    expect(config.github).toBeUndefined();
+    expect(config.microsoft).toBeUndefined();
   });
 
   it('uses secure cookies in production', () => {

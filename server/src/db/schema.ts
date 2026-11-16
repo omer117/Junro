@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   date,
   doublePrecision,
   index,
@@ -63,15 +64,41 @@ export const users = pgTable(
   'users',
   {
     id: id(),
-    /** Which sign-in provider ('google' in beta). More providers need no schema change. */
-    provider: text('provider').notNull(),
-    /** The user's id at that provider. */
-    providerId: text('provider_id').notNull(),
+    /** Old: the provider of the first sign-in. No longer read; see `userIdentities`. */
+    provider: text('provider'),
+    /** Old: the user's id at that provider. No longer read. */
+    providerId: text('provider_id'),
     email: text('email').notNull(),
     name: text('name').notNull(),
     createdAt: createdAt(),
   },
   (t) => [unique('users_provider_identity').on(t.provider, t.providerId)],
+);
+
+/**
+ * A way to sign in: one row per provider account. One user can have several (Google and GitHub),
+ * so the person keeps one set of trips. Email is a fact about the identity, never a key.
+ */
+export const userIdentities = pgTable(
+  'user_identities',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** 'google' | 'github' | 'microsoft' */
+    provider: text('provider').notNull(),
+    /** The account's id at that provider. */
+    providerId: text('provider_id').notNull(),
+    email: text('email').notNull(),
+    /** Whether the provider says it checked that the person owns this email. */
+    emailVerified: boolean('email_verified').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('user_identities_provider_identity').on(t.provider, t.providerId),
+    index('user_identities_user_idx').on(t.userId),
+  ],
 );
 
 /** A user's own default stay per category. Never below the system minimum (enforced in the API). */
@@ -108,6 +135,32 @@ export const trips = pgTable(
   (t) => [index('trips_user_idx').on(t.userId)],
 );
 
+/**
+ * One stay: the days a trip spends in one city, with one hotel. The places for the stay are
+ * collected in a pool (stages with a segment and no day) and `splitSegment` proposes which goes
+ * on which day.
+ */
+export const segments = pgTable(
+  'segments',
+  {
+    id: id(),
+    tripId: uuid('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    hotelLat: doublePrecision('hotel_lat').notNull(),
+    hotelLng: doublePrecision('hotel_lng').notNull(),
+    hotelName: text('hotel_name'),
+    hotelPlaceId: text('hotel_place_id'),
+    /** Defaults copied into each new day of the stay. */
+    travelMode: travelModeEnum('travel_mode').notNull(),
+    startTime: integer('start_time').notNull(),
+    endTime: integer('end_time'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('segments_trip_idx').on(t.tripId)],
+);
+
 export const days = pgTable(
   'days',
   {
@@ -133,6 +186,8 @@ export const days = pgTable(
      * Route lines for the map, one per route (a fingerprint of the mode and the stops in order),
      * so the same route is never bought twice and going back to an earlier one is free.
      */
+    /** The stay this day belongs to, or null for a standalone day. */
+    segmentId: uuid('segment_id').references(() => segments.id, { onDelete: 'cascade' }),
     /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
     liveFrom: jsonb('live_from').$type<LiveFrom>(),
     /** When the day should end at the latest (minutes since midnight), or null for no limit. */
@@ -141,7 +196,7 @@ export const days = pgTable(
     transitDeparture: text('transit_departure'),
     routeLines: jsonb('route_lines').$type<RouteLine[]>().notNull().default([]),
   },
-  (t) => [index('days_trip_idx').on(t.tripId)],
+  (t) => [index('days_trip_idx').on(t.tripId), index('days_segment_idx').on(t.segmentId)],
 );
 
 /** Google place data, fetched once and shared by every user (protects the free tier). */
@@ -160,9 +215,12 @@ export const stages = pgTable(
   'stages',
   {
     id: id(),
-    dayId: uuid('day_id')
-      .notNull()
-      .references(() => days.id, { onDelete: 'cascade' }),
+    /** The day, or null while the stage waits in the pool of its stay. */
+    dayId: uuid('day_id').references(() => days.id, { onDelete: 'cascade' }),
+    /** The stay this stage belongs to (set for pool stages and for stages on a stay's days). */
+    segmentId: uuid('segment_id').references(() => segments.id, { onDelete: 'cascade' }),
+    /** Booked for this time (minutes since midnight); needs a day. */
+    pinnedTime: integer('pinned_time'),
     placeId: uuid('place_id')
       .notNull()
       .references(() => places.id, { onDelete: 'restrict' }),
@@ -177,7 +235,12 @@ export const stages = pgTable(
     position: integer('position'),
     createdAt: createdAt(),
   },
-  (t) => [index('stages_day_idx').on(t.dayId)],
+  (t) => [
+    index('stages_day_idx').on(t.dayId),
+    index('stages_segment_idx').on(t.segmentId),
+    check('stages_has_owner', sql`${t.dayId} is not null or ${t.segmentId} is not null`),
+    check('stages_pin_needs_day', sql`${t.pinnedTime} is null or ${t.dayId} is not null`),
+  ],
 );
 
 /** Route matrix for a day, cached so we do not pay Google twice for the same inputs. */

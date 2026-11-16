@@ -2,8 +2,9 @@
 # Settings (secrets included) are read from /etc/junro.env, which is never in the repo.
 [Unit]
 Description=Junro server
-After=network-online.target postgresql.service
-Wants=network-online.target
+# Redis is a cache and a rate limiter, so it is wanted but not required: Junro starts without it.
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target redis-server.service
 
 [Service]
 Type=simple
