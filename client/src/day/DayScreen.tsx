@@ -1,4 +1,4 @@
-import { ChevronLeft, LocateFixed, Route as RouteIcon, Trash2 } from 'lucide-react';
+import { CalendarClock, ChevronLeft, LocateFixed, Route as RouteIcon, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/api';
@@ -19,6 +19,7 @@ import { useRoute, useSolve } from '../route/api';
 import { RouteSummary } from '../route/RouteSummary';
 import { paletteFor, paletteStyle } from '../styles/palettes';
 import { useTrips } from '../trips/api';
+import { useStay } from '../stay/api';
 import type { TravelMode } from '../trips/types';
 import {
   useAddStage,
@@ -105,6 +106,8 @@ export function DayScreen() {
   const updateDay = useUpdateDay(dayId ?? '');
   // The trip's colours (from its destination country): the trips list is already cached from home.
   const trips = useTrips();
+  // The other days of the stay (when this day is part of one): a stop can move to them.
+  const stay = useStay(day.data?.segmentId);
   const solve = useSolve(dayId ?? '');
   const [pending, setPending] = useState<Place | null>(null);
   const [editing, setEditing] = useState(false);
@@ -504,6 +507,36 @@ export function DayScreen() {
                       value={stage.priority}
                       onChange={(priority) => updateStage.mutate({ id: stage.id, priority })}
                     />
+                    {stage.pinnedTime != null && (
+                      <span className="stay-place__badge">
+                        <CalendarClock size={16} aria-hidden="true" />
+                        Booked {formatClock(stage.pinnedTime)}
+                      </span>
+                    )}
+                    {stay.data && (
+                      <select
+                        aria-label={`Move ${stage.place.name} to`}
+                        value=""
+                        onChange={(event) => {
+                          const target = event.target.value;
+                          if (target === '') return;
+                          updateStage.mutate({
+                            id: stage.id,
+                            dayId: target === 'pool' ? null : target,
+                          });
+                        }}
+                      >
+                        <option value="">Move to…</option>
+                        {stay.data.days
+                          .filter((other) => other.id !== day.data.id)
+                          .map((other) => (
+                            <option key={other.id} value={other.id}>
+                              {formatDayTitle(other.date)}
+                            </option>
+                          ))}
+                        <option value="pool">Back to the places to fit in</option>
+                      </select>
+                    )}
                     <select
                       aria-label={`Category for ${stage.place.name}`}
                       value={stage.category}

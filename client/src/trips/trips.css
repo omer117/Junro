@@ -463,3 +463,9 @@
   background: var(--sky-warm);
   border-radius: var(--radius-sm);
 }
+
+.trips-home__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

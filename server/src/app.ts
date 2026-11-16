@@ -14,6 +14,9 @@ import { airportsRouter } from './routes/airports.js';
 import { daysRouter } from './routes/days.js';
 import { legsRouter } from './routes/legs.js';
 import { routeRouter } from './routes/route.js';
+import { segmentsRouter } from './routes/segments.js';
+import { splitRouter } from './routes/split.js';
+import type { SplitRunner } from './split/split-job.js';
 import { solveRouter } from './routes/solve.js';
 import { stagesRouter } from './routes/stages.js';
 import { stayDurationsRouter } from './routes/stay-durations.js';
@@ -36,6 +39,10 @@ export interface AppDeps {
   placeRateLimit?: number;
   /** Solves allowed per user per minute. */
   solveRateLimit?: number;
+  /** Splits of a stay allowed per user per minute. */
+  splitRateLimit?: number;
+  /** How a split is run. Defaults to a worker thread; tests run it inline. */
+  splitRunner?: SplitRunner;
   /** Lets tests mount extra routes after sign-in is set up and before the real routes. */
   beforeRoutes?: (app: Express) => void;
 }
@@ -112,6 +119,14 @@ export function createApp(deps: AppDeps): Express {
       db: deps.db,
       maps,
       limiter: createRateLimiter({ limit: deps.solveRateLimit ?? 10, windowMs: 60_000 }),
+    }),
+  );
+  app.use(segmentsRouter(deps.db));
+  app.use(
+    splitRouter({
+      db: deps.db,
+      limiter: createRateLimiter({ limit: deps.splitRateLimit ?? 5, windowMs: 60_000 }),
+      ...(deps.splitRunner ? { runner: deps.splitRunner } : {}),
     }),
   );
   app.use(stagesRouter(deps.db));

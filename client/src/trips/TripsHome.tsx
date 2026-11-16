@@ -4,10 +4,12 @@ import { AccountMenu } from '../account/AccountMenu';
 import { PageShell } from '../layout/PageShell';
 import { todayString } from '../lib/dates';
 import { paletteFor } from '../styles/palettes';
+import { useTripStays } from '../stay/api';
 import { useTripDays, useTrips } from './api';
 import { BoardingPass } from './BoardingPass';
 import { DayCard } from './DayCard';
 import { TripForm } from './TripForm';
+import '../stay/stay.css';
 import './trips.css';
 
 /** The signed-in home: the chosen trip as a boarding pass, with its days below. */
@@ -20,6 +22,7 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
   const list = trips.data ?? [];
   const selected = list.find((trip) => trip.id === chosenId) ?? list[0];
   const days = useTripDays(selected?.id);
+  const stays = useTripStays(selected?.id);
 
   return (
     <PageShell className="trips-home" palette={paletteFor(selected?.destination?.countryCode)}>
@@ -98,19 +101,49 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
 
             {days.isError && <p role="alert">Could not load the days of this trip.</p>}
 
+            {/* Days of a stay are grouped under it; the other days are listed as before. */}
+            {(stays.data ?? []).map((stay) => (
+              <section key={stay.id} className="stay-group" aria-label={`Stay in ${stay.name}`}>
+                <div className="stay-group__head">
+                  <h3>{stay.name}</h3>
+                  <Link to={`/segments/${stay.id}`}>Plan this stay</Link>
+                </div>
+                <p className="stay-group__meta">
+                  {stay.dayCount} {stay.dayCount === 1 ? 'day' : 'days'}
+                  {stay.hotelName ? ` · ${stay.hotelName}` : ''}
+                </p>
+                <ul className="trips-home__list" aria-label={`Days in ${stay.name}`}>
+                  {(days.data ?? [])
+                    .filter((day) => day.segmentId === stay.id)
+                    .map((day) => (
+                      <li key={day.id}>
+                        <DayCard day={day} />
+                      </li>
+                    ))}
+                </ul>
+              </section>
+            ))}
+
             {days.data && (
               <ul className="trips-home__list" aria-label="Your days">
-                {days.data.map((day) => (
-                  <li key={day.id}>
-                    <DayCard day={day} />
-                  </li>
-                ))}
+                {days.data
+                  .filter((day) => !day.segmentId)
+                  .map((day) => (
+                    <li key={day.id}>
+                      <DayCard day={day} />
+                    </li>
+                  ))}
               </ul>
             )}
 
-            <Link to={`/trips/${selected.id}/days/new`} className="button button--dark">
-              Add a day
-            </Link>
+            <div className="trips-home__add">
+              <Link to={`/trips/${selected.id}/days/new`} className="button button--dark">
+                Add a day
+              </Link>
+              <Link to={`/trips/${selected.id}/stays/new`} className="button button--outline">
+                Add a stay
+              </Link>
+            </div>
           </section>
 
           <section className="trips-home__new">
