@@ -1,7 +1,7 @@
 import { formatClock } from '../lib/dates';
 import { formatDuration } from '../lib/duration';
 import type { TravelMode } from '../trips/types';
-import type { RouteResult, Violation, Visit } from './types';
+import type { RouteResult, TimeWindow, Violation, Visit } from './types';
 
 /** A wait shorter than this is not worth mentioning. */
 const NOTABLE_WAIT_MINUTES = 5;
@@ -38,8 +38,22 @@ export function describeRoute(
   };
 }
 
-/** What to tell the person about one stop: problems with its opening hours, and a long wait. */
-export function stopNotes(visit: Visit, violations: Violation[]): string[] {
+/** "Open today 11:30–14:30, 17:30–22:00", or null when there is nothing to say. */
+export function openTodayText(windows: TimeWindow[] | null | undefined): string | null {
+  if (!windows || windows.length === 0) return null;
+  const times = windows.map((w) => `${formatClock(w.open)}–${formatClock(w.close)}`);
+  return `Open today ${times.join(', ')}`;
+}
+
+/**
+ * What to tell the person about one stop: problems with its opening hours, and a long wait.
+ * `windows` (when it is open today) lets the wait be explained as a break.
+ */
+export function stopNotes(
+  visit: Visit,
+  violations: Violation[],
+  windows?: TimeWindow[] | null,
+): string[] {
   const notes: string[] = [];
   for (const violation of violations) {
     if (!('stageId' in violation) || violation.stageId !== visit.stageId) continue;
@@ -50,10 +64,31 @@ export function stopNotes(visit: Visit, violations: Violation[]): string[] {
     } else if (violation.kind === 'closed_all_day') {
       notes.push('Closed on this day.');
     } else {
-      notes.push('Its opening hours are shorter than your stay.');
+      notes.push(
+        windows && windows.length > 1
+          ? 'Each of its opening times today is shorter than your stay.'
+          : 'Its opening hours are shorter than your stay.',
+      );
     }
   }
-  if (visit.waited >= NOTABLE_WAIT_MINUTES) {
+  // The window before the one this visit was planned in tells why we are not there earlier.
+  const earlier = visit.window
+    ? windows?.filter((window) => window.open < visit.window!.open).at(-1)
+    : undefined;
+  if (
+    earlier &&
+    visit.window &&
+    visit.arrival >= earlier.close &&
+    visit.waited >= NOTABLE_WAIT_MINUTES
+  ) {
+    notes.push(
+      `Closed for a break until ${formatClock(visit.serviceStart)}. You arrive at ${formatClock(visit.arrival)} and wait ${formatDuration(visit.waited)}.`,
+    );
+  } else if (earlier && visit.window && visit.arrival < earlier.close) {
+    notes.push(
+      `Not enough time before it closes at ${formatClock(earlier.close)}, so this is planned for when it opens again at ${formatClock(visit.window.open)}.`,
+    );
+  } else if (visit.waited >= NOTABLE_WAIT_MINUTES) {
     notes.push(
       `Opens at ${formatClock(visit.serviceStart)}. You arrive at ${formatClock(visit.arrival)} and wait ${formatDuration(visit.waited)}.`,
     );
