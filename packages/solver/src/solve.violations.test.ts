@@ -38,7 +38,7 @@ describe('solve when not everything fits', () => {
 
     // A then B: 120 + 140 = 260 late. B then A: 130 + 150 = 280 late.
     expect(result.order).toEqual(['A', 'B']);
-    expect(result.violations.map((v) => v.stageId)).toEqual(['A', 'B']);
+    expect(result.violations.map((v) => ('stageId' in v ? v.stageId : v.kind))).toEqual(['A', 'B']);
     expect(result.totalLateness).toBe(260);
   });
 

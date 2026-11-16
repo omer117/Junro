@@ -57,11 +57,15 @@ export function evaluateOrder(input: SolveInput, order: string[]): SolveResult {
     time = departure;
   }
 
-  return {
-    order: [...order],
-    visits,
-    endArrival: time + input.travelTime(position, input.end, time),
-    violations,
-    totalLateness,
-  };
+  const endArrival = time + input.travelTime(position, input.end, time);
+
+  // Reaching the end point after the day end time counts as lateness too, so that the solver can
+  // trade it against dropping an optional stop.
+  const overtime = input.endTime === undefined ? 0 : Math.max(0, endArrival - input.endTime);
+  if (overtime > 0) {
+    totalLateness += overtime;
+    violations.push({ kind: 'past_day_end', minutesLate: overtime });
+  }
+
+  return { order: [...order], visits, endArrival, violations, totalLateness, dropped: [] };
 }
