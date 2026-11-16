@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { userIdentities, users } from '../db/schema.js';
 import type { User } from './types.js';
@@ -93,5 +93,66 @@ async function insertIdentity(tx: Tx, userId: string, identity: ProviderIdentity
     providerId: identity.providerId,
     email: identity.email,
     emailVerified: identity.emailVerified,
+  });
+}
+
+/**
+ * Explicit linking from Settings: the signed-in user asked to connect this provider, so it is
+ * attached to them whatever its email says. An identity that already belongs to ANOTHER user is
+ * refused: merging two accounts that both have trips is out of scope.
+ */
+export async function linkIdentity(
+  db: Db,
+  userId: string,
+  identity: ProviderIdentity,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [known] = await tx
+      .select()
+      .from(userIdentities)
+      .where(
+        and(
+          eq(userIdentities.provider, identity.provider),
+          eq(userIdentities.providerId, identity.providerId),
+        ),
+      );
+    if (known && known.userId !== userId) throw new SignInRefused('identity_in_use');
+    if (known) {
+      await tx
+        .update(userIdentities)
+        .set({ email: identity.email, emailVerified: identity.emailVerified })
+        .where(eq(userIdentities.id, known.id));
+      return;
+    }
+    await insertIdentity(tx, userId, identity);
+  });
+}
+
+/** A user's sign-in methods, for Settings. The provider's own account id is not shared. */
+export async function listIdentities(db: Db, userId: string) {
+  return db
+    .select({
+      id: userIdentities.id,
+      provider: userIdentities.provider,
+      email: userIdentities.email,
+      createdAt: userIdentities.createdAt,
+    })
+    .from(userIdentities)
+    .where(eq(userIdentities.userId, userId))
+    .orderBy(asc(userIdentities.createdAt), asc(userIdentities.id));
+}
+
+/** Removes one of the user's own identities. Returns false when it is not theirs. Never the last. */
+export async function removeIdentity(
+  db: Db,
+  userId: string,
+  identityId: string,
+): Promise<'removed' | 'not_found' | 'last_identity'> {
+  return db.transaction(async (tx) => {
+    const mine = await tx.select().from(userIdentities).where(eq(userIdentities.userId, userId));
+    if (!mine.some((i) => i.id === identityId)) return 'not_found';
+    if (mine.length <= 1) return 'last_identity';
+    await tx.delete(userIdentities).where(eq(userIdentities.id, identityId));
+    return 'removed';
   });
 }
