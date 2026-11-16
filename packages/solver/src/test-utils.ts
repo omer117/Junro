@@ -8,7 +8,7 @@ export const lineTravel: TravelTimeFn = (from, to) => Math.abs(from.lng - to.lng
 
 export function stageAt(id: string, x: number, stayMinutes: number, window?: TimeWindow): Stage {
   return window
-    ? { id, location: loc(x), stayMinutes, window }
+    ? { id, location: loc(x), stayMinutes, windows: [window] }
     : { id, location: loc(x), stayMinutes };
 }
 

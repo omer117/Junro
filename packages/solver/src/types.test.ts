@@ -13,7 +13,7 @@ describe('test utils', () => {
     expect(plain).toEqual({ id: 'A', location: loc(10), stayMinutes: 30 });
 
     const timed = stageAt('B', 20, 15, { open: 540, close: 1020 });
-    expect(timed.window).toEqual({ open: 540, close: 1020 });
+    expect(timed.windows).toEqual([{ open: 540, close: 1020 }]);
   });
 });
 

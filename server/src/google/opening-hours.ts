@@ -1,10 +1,13 @@
-import type { Stage } from '@junro/solver';
 import type { OpeningHours } from './types.js';
 
 export type { OpeningHours };
 
 /** The solver-facing part of a stage that comes from opening hours. */
-export type HoursForDay = Pick<Stage, 'window' | 'closedAllDay'>;
+/** Temporary one-window shape; replaced by `windowsForDate` in the next step. */
+export type HoursForDay = {
+  window?: { open: number; close: number };
+  closedAllDay?: boolean;
+};
 
 const END_OF_DAY = 1440;
 

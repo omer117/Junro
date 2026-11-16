@@ -51,7 +51,7 @@ export async function loadDayProblem(db: Db, userId: string, day: DayRow): Promi
       override: stage.stayOverrideMinutes,
     }),
     priority: stage.priority,
-    ...windowForDate(place.openingHours as OpeningHours | null, day.date),
+    ...legacyHours(windowForDate(place.openingHours as OpeningHours | null, day.date)),
   }));
 
   const savedIds = rows
@@ -114,5 +114,14 @@ export function remainingOf(problem: DayProblem, day: DayRow, live: LiveFrom | n
     doneIds: done,
     savedIds: problem.savedIds.filter((id) => !isDone.has(id)),
     live,
+  };
+}
+
+function legacyHours(
+  hours: ReturnType<typeof windowForDate>,
+): Pick<Stage, 'windows' | 'closedAllDay'> {
+  return {
+    ...(hours.window ? { windows: [hours.window] } : {}),
+    ...(hours.closedAllDay ? { closedAllDay: true } : {}),
   };
 }

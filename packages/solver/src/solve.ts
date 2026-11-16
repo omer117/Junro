@@ -1,4 +1,4 @@
-import { evaluateOrder, latenessOf, serviceStartFor } from './evaluate.js';
+import { evaluateOrder, visitAt } from './evaluate.js';
 import type { SolveInput, SolveResult } from './types.js';
 import { UnreachableError, validateInput } from './validate.js';
 
@@ -58,8 +58,9 @@ export function solve(input: SolveInput): SolveResult {
     // Infinity / NaN means no route: this leg does not exist.
     if (!Number.isFinite(arrival)) return;
     const target = stages[next]!;
-    const leave = serviceStartFor(target, arrival) + target.stayMinutes;
-    const lateness = (parent?.lateness ?? 0) + latenessOf(target, leave);
+    const timing = visitAt(target, arrival);
+    const leave = timing.departure;
+    const lateness = (parent?.lateness ?? 0) + timing.lateness;
     addLabel(states[(mask | (1 << next)) * n + next]!, { lateness, leave, stage: next, parent });
   };
 

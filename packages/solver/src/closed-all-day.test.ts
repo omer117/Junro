@@ -38,7 +38,7 @@ describe('a stage that is closed all day', () => {
   });
 
   it('ignores a window that comes with it', () => {
-    const stage: Stage = { ...closed('shut', 20, 10), window: { open: 0, close: 2000 } };
+    const stage: Stage = { ...closed('shut', 20, 10), windows: [{ open: 0, close: 2000 }] };
 
     expect(solve(base([stage])).violations).toEqual([{ stageId: 'shut', kind: 'closed_all_day' }]);
   });
