@@ -34,6 +34,8 @@ export interface Config {
   /** Server-side key for Places and Routes. Never sent to the browser. */
   googleApiKey: string | undefined;
   quotaCaps: QuotaCaps;
+  /** Where Redis is. Missing means no Redis: everything works the same, just without it. */
+  redisUrl: string | undefined;
 }
 
 /** Reads settings from environment variables. Secrets live here and nowhere else. */
@@ -74,6 +76,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     clientUrl: env.CLIENT_URL ?? 'http://localhost:5173',
     secureCookies: env.NODE_ENV === 'production',
     googleApiKey: env.GOOGLE_API_KEY || undefined,
+    redisUrl: env.REDIS_URL || undefined,
     quotaCaps: {
       autocomplete: cap('GOOGLE_CAP_AUTOCOMPLETE', DEFAULT_QUOTA_CAPS.autocomplete),
       placeDetails: cap('GOOGLE_CAP_PLACE_DETAILS', DEFAULT_QUOTA_CAPS.placeDetails),

@@ -105,7 +105,7 @@ export function splitRouter({ db, limiter, runner = runSplitInWorker }: SplitRou
   router.post('/segments/:id/split', async (req, res) => {
     const userId = req.user!.id;
     const segment = await requireOwnedSegment(db, userId, uuidParam(req.params.id));
-    if (!limiter.allow(userId)) {
+    if (!(await limiter.allow(userId))) {
       throw new HttpError(429, 'rate_limited', 'Too many splits. Wait a moment.');
     }
 

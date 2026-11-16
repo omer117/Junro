@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDb } from './db/client.js';
 import { createHttpMapsClient } from './google/http-client.js';
+import { createRedis } from './redis.js';
 
 const config = loadConfig(process.env);
 const { db, pool } = createDb(config.databaseUrl);
@@ -20,6 +21,7 @@ const app = createApp({
   ...(config.microsoft ? { microsoft: config.microsoft } : {}),
   clientUrl: config.clientUrl,
   quotaCaps: config.quotaCaps,
+  ...(config.redisUrl ? { redis: createRedis(config.redisUrl) } : {}),
   ...(config.googleApiKey ? { maps: createHttpMapsClient({ apiKey: config.googleApiKey }) } : {}),
 });
 

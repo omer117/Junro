@@ -113,7 +113,8 @@ npm run db:migrate -w @junro/server
 npm run dev -w @junro/server      # http://localhost:3000/health
 ```
 
-`npm test` also needs the database from `docker compose`.
+`npm test` also needs the database and Redis from `docker compose` (Redis on port 6380;
+`TEST_REDIS_URL` in `.env.example`). The server itself works without Redis: leave `REDIS_URL` out.
 
 ### Google sign-in (optional locally)
 
@@ -295,6 +296,25 @@ Sources and credits:
   `/etc/junro.env` on the VM and are never in the repository: `NODE_ENV=production`, `PORT`,
   `DATABASE_URL`, `SESSION_SECRET`, `CLIENT_URL`, the three `GOOGLE_*` sign-in variables and
   `GOOGLE_API_KEY`.
+- **Redis (optional, on the same VM):** a shared rate limiter (atomic counters) and a fast copy of
+  the route-matrix cache. Postgres stays the source of truth and the Google usage counter stays
+  in Postgres, so if Redis is down or `REDIS_URL` is not set the app works the same, just without
+  it. `/health` reports `redis: up | down | off`.
+
+  ```bash
+  sudo apt install redis-server          # needs Redis 7 or later (Ubuntu 24.04 has 7.0)
+  sudo nano /etc/redis/redis.conf
+  ```
+
+  In `redis.conf`: `bind 127.0.0.1 ::1`, `protected-mode yes`, `requirepass <a long random
+password>`, `maxmemory 64mb`, `maxmemory-policy allkeys-lru`, `save ""` and `appendonly no` (it
+  is a cache: nothing is written to disk and the oldest keys are dropped when it is full). Then
+  `sudo systemctl restart redis-server`. Never open port 6379 in the Oracle security list or the
+  VM firewall. Add `REDIS_URL=redis://:<password>@127.0.0.1:6379` to `/etc/junro.env` and restart
+  Junro. `deploy/junro.service` lists Redis with `Wants=`, not `Requires=`, so Junro still starts
+  without it. Look at how well the cache works with `redis-cli INFO stats` (`keyspace_hits`,
+  `keyspace_misses`).
+
 - **Sign-in:** in Google Cloud add `https://<your-domain>/api/auth/google/callback` as an
   authorised redirect URI and the domain as a JavaScript origin, and put the same callback URL
   in `GOOGLE_CALLBACK_URL`.

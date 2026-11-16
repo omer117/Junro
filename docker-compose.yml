@@ -17,6 +17,18 @@ services:
       timeout: 3s
       retries: 15
 
+  # A cache and rate limiter store. Nothing in it cannot be lost: Postgres is the source of truth.
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    ports:
+      - '6380:6379' # 6380 on the host so it does not clash with another local Redis
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
   # Optional: a web page to browse the database. Start it with:
   #   docker compose --profile tools up -d adminer      then open http://localhost:8081
   adminer:
