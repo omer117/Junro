@@ -1,8 +1,8 @@
-import type { LatLng, Stage } from '@junro/solver';
+import type { LatLng, Stage, TimeWindow } from '@junro/solver';
 import { asc, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { categoryPreferences, places, stages, type LiveFrom, type days } from '../db/schema.js';
-import { windowForDate } from '../google/opening-hours.js';
+import { windowsForDate } from '../google/opening-hours.js';
 import type { OpeningHours } from '../google/types.js';
 import { resolveStayMinutes } from '../stay.js';
 
@@ -51,7 +51,7 @@ export async function loadDayProblem(db: Db, userId: string, day: DayRow): Promi
       override: stage.stayOverrideMinutes,
     }),
     priority: stage.priority,
-    ...legacyHours(windowForDate(place.openingHours as OpeningHours | null, day.date)),
+    ...windowsForDate(place.openingHours as OpeningHours | null, day.date),
   }));
 
   const savedIds = rows
@@ -117,11 +117,12 @@ export function remainingOf(problem: DayProblem, day: DayRow, live: LiveFrom | n
   };
 }
 
-function legacyHours(
-  hours: ReturnType<typeof windowForDate>,
-): Pick<Stage, 'windows' | 'closedAllDay'> {
-  return {
-    ...(hours.window ? { windows: [hours.window] } : {}),
-    ...(hours.closedAllDay ? { closedAllDay: true } : {}),
-  };
+/**
+ * When each stop is open on this day, for the client to show: a list of windows, an empty list
+ * when it is closed all day, or null when there is no limit. (Raw hours never leave the server.)
+ */
+export function openTodayOf(stagesOfDay: Stage[]): Record<string, TimeWindow[] | null> {
+  return Object.fromEntries(
+    stagesOfDay.map((stage) => [stage.id, stage.closedAllDay ? [] : (stage.windows ?? null)]),
+  );
 }

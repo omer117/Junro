@@ -2,7 +2,7 @@ import { evaluateOrder, type SolveInput } from '@junro/solver';
 import { Router } from 'express';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
-import { loadDayProblem, remainingOf } from '../travel/day-problem.js';
+import { loadDayProblem, openTodayOf, remainingOf } from '../travel/day-problem.js';
 import { readCachedHybridTimes, legsOf, type HybridTimes } from '../travel/hybrid.js';
 import { readCachedTravelTimes } from '../travel/matrix.js';
 import { readRouteLine, readTransitRouteLine } from '../travel/route-line.js';
@@ -80,6 +80,7 @@ export function routeRouter(db: Db): Router {
       violations: result.violations,
       totalLateness: result.totalLateness,
       dropped: droppedIds,
+      openToday: openTodayOf(problem.solverStages),
       live,
       ...(legs ? { legs } : {}),
       ...(hybrid ? { transitAvailable: hybrid.transitAvailable } : {}),

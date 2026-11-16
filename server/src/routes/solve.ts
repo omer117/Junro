@@ -17,7 +17,7 @@ import { HttpError } from '../errors.js';
 import { GoogleNotConfiguredError } from '../google/errors.js';
 import type { MapsClient } from '../google/types.js';
 import type { RateLimiter } from '../rate-limit.js';
-import { loadDayProblem, remainingOf } from '../travel/day-problem.js';
+import { loadDayProblem, openTodayOf, remainingOf } from '../travel/day-problem.js';
 import { departureInstant } from '../travel/departure.js';
 import { legsOf, loadHybridTimes, type HybridTimes } from '../travel/hybrid.js';
 import { loadTravelTimes } from '../travel/matrix.js';
@@ -178,6 +178,7 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
       violations: result.violations,
       totalLateness: result.totalLateness,
       dropped: mode === 'full' ? result.dropped : remaining.droppedIds,
+      openToday: openTodayOf(problem.solverStages),
       live,
       ...(legs ? { legs } : {}),
       ...(hybrid ? { transitAvailable: hybrid.transitAvailable } : {}),
