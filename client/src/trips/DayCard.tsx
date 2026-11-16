@@ -8,7 +8,10 @@ export function DayCard({ day }: { day: Day }) {
   const stops = `${day.stageCount} ${day.stageCount === 1 ? 'stop' : 'stops'}`;
 
   return (
-    <Link to={`/days/${day.id}`} className={empty ? 'day-card day-card--empty' : 'day-card'}>
+    <Link
+      to={`/days/${day.id}`}
+      className={empty ? 'day-card day-card--empty' : 'day-card day-card--planned'}
+    >
       <span className="day-card__date">
         <span>{formatMonthAbbr(day.date)}</span>
         <strong>{formatDayNumber(day.date)}</strong>

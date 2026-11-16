@@ -4,6 +4,7 @@ import { AccountMenu } from '../account/AccountMenu';
 import { PageShell } from '../layout/PageShell';
 import { todayString } from '../lib/dates';
 import { useTripStays } from '../stay/api';
+import { paletteFor } from '../styles/palettes';
 import { useTripDays, useTrips } from './api';
 import { BoardingPass } from './BoardingPass';
 import { DayCard } from './DayCard';
@@ -24,7 +25,7 @@ export function TripsHome({ today = todayString() }: { today?: string }) {
   const stays = useTripStays(selected?.id);
 
   return (
-    <PageShell className="trips-home">
+    <PageShell className="trips-home" palette={paletteFor(selected?.destination?.countryCode)}>
       <header className="trips-home__header">
         <h1>Your trips</h1>
         <AccountMenu />
