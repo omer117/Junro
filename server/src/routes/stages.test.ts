@@ -57,6 +57,8 @@ describe('stages API', () => {
     expect(res.body).toEqual({
       id: expect.any(String),
       dayId: day.id,
+      segmentId: null,
+      pinnedTime: null,
       category: 'temple',
       stayOverrideMinutes: null,
       done: false,

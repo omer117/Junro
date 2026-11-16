@@ -14,7 +14,12 @@ export interface DayDetail extends Day {
 
 export interface Stage {
   id: string;
-  dayId: string;
+  /** The day, or null while the place waits in the pool of its stay. */
+  dayId: string | null;
+  /** The stay this place belongs to (when it is part of one). */
+  segmentId?: string | null;
+  /** Booked for this time (minutes since midnight), or null. */
+  pinnedTime?: number | null;
   category: Category;
   stayOverrideMinutes: number | null;
   done: boolean;

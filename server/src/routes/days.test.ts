@@ -43,6 +43,7 @@ describe('days API', () => {
     expect(res.body).toEqual({
       id: expect.any(String),
       tripId: trip.id,
+      segmentId: null,
       ...validDay,
       startName: null,
       endName: null,

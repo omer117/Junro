@@ -3,6 +3,7 @@ import { signInWithIdentity } from './auth/identities.js';
 import type { Express } from 'express';
 import type { Db } from './db/client.js';
 import { createApp, type AppDeps } from './app.js';
+import { runSplitJob } from './split/split-job.js';
 
 /**
  * An app for tests. Adds `POST /__login/:userId`, which signs that user in without
@@ -12,6 +13,8 @@ export function createTestApp(db: Db, overrides: Partial<AppDeps> = {}): Express
   return createApp({
     db,
     sessionSecret: 'test-secret',
+    // Inline, so most tests do not start a thread; one test uses the real worker.
+    splitRunner: async (job) => runSplitJob(job),
     beforeRoutes: (app) => {
       app.post('/__login/:userId', (req, res, next) => {
         req.login({ id: String(req.params.userId) } as Express.User, (err) =>
