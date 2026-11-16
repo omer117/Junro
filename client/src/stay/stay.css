@@ -1,0 +1,168 @@
+/* A stay: places to fit in, bookings, and the proposed split */
+.stay-places {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.stay-places > li {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.stay-place__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.stay-place__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.stay-place__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: var(--ground);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.stay-place__book {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--ground);
+  border-radius: var(--radius-md);
+}
+
+.stay-place__book input[type='time'] {
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.proposal {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.proposal h2,
+.proposal h3,
+.proposal p {
+  margin: 0;
+}
+
+.proposal__estimate,
+.proposal__summary,
+.proposal__empty {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.proposal__day {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--ground);
+  border-radius: var(--radius-md);
+}
+
+.proposal__places {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.proposal__places li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.proposal__name {
+  font-weight: 600;
+}
+
+.proposal__time,
+.proposal__moved {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.proposal__warning {
+  display: flex;
+  flex-basis: 100%;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--warning-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.proposal__left-out ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proposal__left-out li {
+  display: grid;
+}
+
+.proposal__left-out span {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.proposal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Days grouped under their stay on the trip home */
+.stay-group {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.stay-group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.stay-group__head h3 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.stay-group__head a {
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.stay-group__meta {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}

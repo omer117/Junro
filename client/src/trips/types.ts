@@ -14,6 +14,8 @@ export interface Trip {
 export interface Day {
   id: string;
   tripId: string;
+  /** The stay this day belongs to, or null/missing for a standalone day. */
+  segmentId?: string | null;
   /** 'YYYY-MM-DD' */
   date: string;
   start: { lat: number; lng: number };

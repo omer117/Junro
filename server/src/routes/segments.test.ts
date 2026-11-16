@@ -160,6 +160,20 @@ describe('the pool and moving places between days', () => {
     expect(detail.body.days.every((d: { stageCount: number }) => d.stageCount === 0)).toBe(true);
   });
 
+  it('lists every place of the stay, the pool and the days together', async () => {
+    const { agent, createStay, addToPool } = await setup();
+    const stay = (await createStay()).body;
+    const day = (await agent.get(`/segments/${stay.id}`)).body.days[0];
+    const a = (await addToPool(stay.id, 10)).body;
+    const b = (await addToPool(stay.id, 11)).body;
+    await agent.patch(`/stages/${a.id}`).send({ dayId: day.id });
+
+    const all = await agent.get(`/segments/${stay.id}/places`);
+
+    expect(all.body.map((s: { id: string }) => s.id).sort()).toEqual([a.id, b.id].sort());
+    expect(all.body.find((s: { id: string }) => s.id === a.id).dayId).toBe(day.id);
+  });
+
   it('moves a place from the pool to a day of the stay and back, keeping its id', async () => {
     const { agent, createStay, addToPool } = await setup();
     const stay = (await createStay()).body;
@@ -234,6 +248,15 @@ describe('booking a time (pin)', () => {
     await s.agent.patch(`/stages/${a.id}`).send({ dayId: day.id });
     return { ...s, stay, day, a };
   }
+
+  it('can book a pool place for a day and a time in one change', async () => {
+    const { agent, stay, day, addToPool } = await onDay();
+    const pooled = (await addToPool(stay.id, 30)).body;
+
+    const res = await agent.patch(`/stages/${pooled.id}`).send({ dayId: day.id, pinnedTime: 1000 });
+
+    expect(res.body).toMatchObject({ dayId: day.id, pinnedTime: 1000 });
+  });
 
   it('can be set on a day and removed', async () => {
     const { agent, a } = await onDay();

@@ -215,6 +215,18 @@ export function segmentsRouter(db: Db): Router {
     res.json(rows);
   });
 
+  /** Every place of the stay: the pool and the places already on a day. */
+  router.get('/segments/:id/places', async (req, res) => {
+    const segment = await requireOwnedSegment(db, req.user!.id, uuidParam(req.params.id));
+    const rows = await db
+      .select(stageWithPlace)
+      .from(stages)
+      .innerJoin(places, eq(stages.placeId, places.id))
+      .where(eq(stages.segmentId, segment.id))
+      .orderBy(asc(stages.createdAt), asc(stages.id));
+    res.json(rows);
+  });
+
   router.post('/segments/:id/stages', validateBody(createBody), async (req, res) => {
     const segment = await requireOwnedSegment(db, req.user!.id, uuidParam(req.params.id));
     const body = req.body as z.infer<typeof createBody>;
