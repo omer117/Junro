@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { requireAuth } from '../auth/require-auth.js';
 import type { Db } from '../db/client.js';
 import { loadDayProblem, openTodayOf, remainingOf } from '../travel/day-problem.js';
+import type { RedisHandle } from '../redis.js';
 import { readCachedHybridTimes, legsOf, type HybridTimes } from '../travel/hybrid.js';
 import { readCachedTravelTimes } from '../travel/matrix.js';
 import { readRouteLine, readTransitRouteLine } from '../travel/route-line.js';
@@ -17,7 +18,7 @@ import { requireOwnedDay } from './ownership.js';
  * When it cannot be worked out from the cache (a new stop, a new travel mode, no solve yet),
  * the answer is 204 (no content) and the person presses "Find my route".
  */
-export function routeRouter(db: Db): Router {
+export function routeRouter(db: Db, redis?: RedisHandle): Router {
   const router = Router();
   router.use('/days/:dayId/route', requireAuth);
 
@@ -42,11 +43,12 @@ export function routeRouter(db: Db): Router {
     let travelTime: SolveInput['travelTime'] | null;
     if (day.travelMode === 'transit') {
       if (!departureTime) return noRoute();
-      hybrid = await readCachedHybridTimes({ db, dayId: day.id, points, departureTime });
+      hybrid = await readCachedHybridTimes({ db, redis, dayId: day.id, points, departureTime });
       travelTime = hybrid?.travelTime ?? null;
     } else {
       travelTime = await readCachedTravelTimes({
         db,
+        redis,
         dayId: day.id,
         mode: day.travelMode,
         points,

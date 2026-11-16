@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import type { LatLng, TravelTimeFn } from '@junro/solver';
-import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { routeMatrixCache, type TravelMode } from '../db/schema.js';
+import type { TravelMode } from '../db/schema.js';
 import type { MapsClient } from '../google/types.js';
+import type { RedisHandle } from '../redis.js';
+import { readMatrix, readMatrixFromDb, writeMatrix } from './matrix-cache.js';
 
 /** One Google request takes at most 25 origins and 25 destinations. */
 export const MAX_MATRIX_POINTS = 25;
@@ -39,13 +40,15 @@ interface StoredMatrix {
  */
 export async function loadTravelTimes(args: {
   db: Db;
+  /** Optional: a fast copy of the cache. Postgres stays the truth. */
+  redis?: RedisHandle | undefined;
   maps: MapsClient;
   dayId: string;
   mode: TravelMode;
   /** Start, every stage, and end. Duplicates (start = end) are merged. */
   points: LatLng[];
 }): Promise<TravelTimeFn> {
-  const { db, maps, dayId, mode } = args;
+  const { db, redis, maps, dayId, mode } = args;
 
   const needed = new Map<string, LatLng>();
   for (const point of args.points) {
@@ -60,9 +63,10 @@ export async function loadTravelTimes(args: {
 
   // seconds.get("a|b") is a number (known), Infinity (no route), or undefined (never asked).
   const seconds = new Map<string, number>();
-  const storedPoints = await load(db, dayId, mode, seconds);
-
   const known = (from: string, to: string) => from === to || seconds.has(`${from}|${to}`);
+  const knowsEverything = () =>
+    neededKeys.every((from) => neededKeys.every((to) => known(from, to)));
+  const storedPoints = await load(db, redis, dayId, mode, seconds, knowsEverything);
 
   // Origins we know nothing about get a full row; the rest only miss the destinations that are new.
   const emptyOrigins = neededKeys.filter(
@@ -95,7 +99,7 @@ export async function loadTravelTimes(args: {
         if (from !== to) seconds.set(`${from}|${to}`, result[i]![j]!);
       }),
     );
-    await save(db, dayId, mode, seconds, storedPoints, neededKeys);
+    await save(db, redis, dayId, mode, seconds, storedPoints, neededKeys);
   }
 
   return lookup(seconds);
@@ -119,6 +123,7 @@ function lookup(seconds: Map<string, number>): TravelTimeFn {
  */
 export async function readCachedTravelTimes(args: {
   db: Db;
+  redis?: RedisHandle | undefined;
   dayId: string;
   mode: TravelMode;
   points: LatLng[];
@@ -127,36 +132,54 @@ export async function readCachedTravelTimes(args: {
   if (keys.length < 2) return () => 0;
 
   const seconds = new Map<string, number>();
-  await load(args.db, args.dayId, args.mode, seconds);
-  for (const from of keys) {
-    for (const to of keys) {
-      if (from !== to && !seconds.has(`${from}|${to}`)) return null;
-    }
-  }
-  return lookup(seconds);
+  const knowsEverything = () =>
+    keys.every((from) => keys.every((to) => from === to || seconds.has(`${from}|${to}`)));
+  // A Redis copy can be behind, so "something is missing" is checked against Postgres inside
+  // `load` before we answer "needs a fresh solve".
+  await load(args.db, args.redis, args.dayId, args.mode, seconds, knowsEverything);
+  return knowsEverything() ? lookup(seconds) : null;
 }
 
+/**
+ * Fills `into` with the stored pairs. Reads Redis first (a copy), then Postgres.
+ *
+ * Redis can only ever be BEHIND Postgres (pairs are only added, never changed), so a Redis value
+ * is trusted for what it has. If it does not have everything the caller needs (`complete`), the
+ * truth is read from Postgres before anyone asks Google: a stale cache must never cost money.
+ */
 async function load(
   db: Db,
+  redis: RedisHandle | undefined,
   dayId: string,
   mode: TravelMode,
   into: Map<string, number>,
+  complete: () => boolean,
 ): Promise<string[]> {
-  const [row] = await db
-    .select()
-    .from(routeMatrixCache)
-    .where(and(eq(routeMatrixCache.dayId, dayId), eq(routeMatrixCache.travelMode, mode)));
-  if (!row) return [];
+  const found = await readMatrix(db, redis, dayId, mode);
+  if (!found) return [];
 
-  const stored = row.matrix as StoredMatrix;
-  for (const [from, to, value] of stored.entries) {
-    into.set(`${stored.points[from]}|${stored.points[to]}`, value ?? Infinity);
+  let stored = found.matrix as StoredMatrix;
+  fill(into, stored);
+  if (found.fromRedis && !complete()) {
+    const truth = await readMatrixFromDb(db, dayId, mode);
+    if (truth) {
+      stored = truth as StoredMatrix;
+      into.clear();
+      fill(into, stored);
+    }
   }
   return stored.points;
 }
 
+function fill(into: Map<string, number>, stored: StoredMatrix): void {
+  for (const [from, to, value] of stored.entries) {
+    into.set(`${stored.points[from]}|${stored.points[to]}`, value ?? Infinity);
+  }
+}
+
 async function save(
   db: Db,
+  redis: RedisHandle | undefined,
   dayId: string,
   mode: TravelMode,
   seconds: Map<string, number>,
@@ -180,11 +203,5 @@ async function save(
 
   const matrix: StoredMatrix = { points, entries };
   const inputHash = createHash('sha256').update(points.slice().sort().join(';')).digest('hex');
-  await db
-    .insert(routeMatrixCache)
-    .values({ dayId, travelMode: mode, inputHash, matrix })
-    .onConflictDoUpdate({
-      target: [routeMatrixCache.dayId, routeMatrixCache.travelMode],
-      set: { inputHash, matrix },
-    });
+  await writeMatrix(db, redis, dayId, mode, inputHash, matrix);
 }

@@ -118,10 +118,11 @@ export function createApp(deps: AppDeps): Express {
     }),
   );
   app.use(daysRouter(deps.db));
-  app.use(routeRouter(deps.db));
+  app.use(routeRouter(deps.db, deps.redis));
   app.use(
     solveRouter({
       db: deps.db,
+      redis: deps.redis,
       maps,
       limiter: limiter('solve', deps.solveRateLimit ?? 10),
     }),

@@ -19,6 +19,7 @@ import type { MapsClient } from '../google/types.js';
 import type { RateLimiter } from '../rate-limit.js';
 import { loadDayProblem, openTodayOf, remainingOf } from '../travel/day-problem.js';
 import { departureInstant } from '../travel/departure.js';
+import type { RedisHandle } from '../redis.js';
 import { legsOf, loadHybridTimes, type HybridTimes } from '../travel/hybrid.js';
 import { loadTravelTimes } from '../travel/matrix.js';
 import { loadRouteLine, loadTransitRouteLine } from '../travel/route-line.js';
@@ -41,6 +42,8 @@ const solveBody = z
 
 export interface SolveRouterDeps {
   db: Db;
+  /** Optional Redis copy of the matrix cache. */
+  redis?: RedisHandle | undefined;
   /** Already wrapped by the usage guard. Undefined when no API key is configured. */
   maps: MapsClient | undefined;
   limiter: RateLimiter;
@@ -52,7 +55,7 @@ export interface SolveRouterDeps {
  *   minimal  keep the order the user has; new stages go where they add the least time and
  *            removed stages are skipped. Without a saved order it falls back to full.
  */
-export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
+export function solveRouter({ db, redis, maps, limiter }: SolveRouterDeps): Router {
   const router = Router();
   router.use('/days/:dayId/solve', requireAuth);
 
@@ -90,11 +93,12 @@ export function solveRouter({ db, maps, limiter }: SolveRouterDeps): Router {
     let hybrid: HybridTimes | null = null;
     let travelTime: SolveInput['travelTime'];
     if (departureTime) {
-      hybrid = await loadHybridTimes({ db, maps, dayId: day.id, points, departureTime });
+      hybrid = await loadHybridTimes({ db, redis, maps, dayId: day.id, points, departureTime });
       travelTime = hybrid.travelTime;
     } else {
       travelTime = await loadTravelTimes({
         db,
+        redis,
         maps,
         dayId: day.id,
         mode: day.travelMode,
