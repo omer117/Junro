@@ -9,8 +9,10 @@ import { LocationError, currentPosition } from '../lib/geolocation';
 import { RadioChips } from '../lib/RadioChips';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { isSamePlace } from '../map/endpoints';
-import type { MapMarker } from '../map/engine';
+import type { MapMarker, RouteLeg } from '../map/engine';
 import { MapView } from '../map/MapView';
+import { buildRouteLegs } from '../map/routeLegs';
+import { stopStates } from '../map/stopStates';
 import type { Place } from '../places/api';
 import { PlaceSearch } from '../places/PlaceSearch';
 import { useRoute, useSolve } from '../route/api';
@@ -40,9 +42,6 @@ const COMPUTER_PADDING = { top: 110, right: 48, bottom: 48, left: 480 };
 
 /** How long the route line takes to draw itself, plus a little. */
 const ANIMATION_MS = 2000;
-
-/** A wait at a stop longer than this is flagged on the map, like a problem. */
-const NOTABLE_WAIT_MINUTES = 5;
 
 const PRIORITIES: Array<{ value: 'must' | 'optional'; label: string }> = [
   { value: 'must', label: 'Must' },
@@ -117,6 +116,8 @@ export function DayScreen() {
     setEndTimeText(savedEndTime != null ? timeOf(savedEndTime) : '');
   }, [savedEndTime]);
   const [locationProblem, setLocationProblem] = useState<string | null>(null);
+  // The stop chosen on the map or in the plan (they follow each other).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const wide = useMediaQuery(WIDE_SCREEN);
 
   // The line draws itself once, right after "Find my route", and not again when the day is reopened.
@@ -155,20 +156,13 @@ export function DayScreen() {
 
   const markers = useMemo<MapMarker[]>(() => {
     if (!day.data) return [];
-    // A stop is flagged on the map when it has a problem or a long wait.
-    const flagged = new Set<string>();
-    for (const violation of savedRoute?.violations ?? []) {
-      if ('stageId' in violation) flagged.add(violation.stageId);
-    }
-    for (const visit of savedRoute?.visits ?? []) {
-      if (visit.waited >= NOTABLE_WAIT_MINUTES) flagged.add(visit.stageId);
-    }
+    const states = stopStates(stages, savedRoute, { today: day.data.date === todayString() });
     return [
       {
         id: 'start',
         kind: 'start',
         position: day.data.start,
-        label: `Start · ${formatClock(day.data.startTime)}`,
+        label: `${day.data.startName ?? 'Start'} · ${formatClock(day.data.startTime)}`,
       },
       ...stages.map((stage): MapMarker => ({
         id: stage.id,
@@ -177,9 +171,7 @@ export function DayScreen() {
         name: stage.place.name,
         category: stage.category,
         ...(hasRoute && !stage.dropped ? { number: routed.indexOf(stage) + 1 } : {}),
-        ...(stage.dropped ? { dropped: true } : {}),
-        ...(flagged.has(stage.id) ? { warning: true } : {}),
-        ...(stage.done ? { done: true } : {}),
+        state: states.get(stage.id) ?? 'upcoming',
       })),
       {
         id: 'end',
@@ -189,6 +181,35 @@ export function DayScreen() {
       },
     ];
   }, [day.data, stages, routed, hasRoute, savedRoute]);
+
+  // The route as legs, each in the style of how it is travelled (split from the one line).
+  const routeLegs = useMemo<RouteLeg[] | null>(() => {
+    if (!day.data || !savedRoute?.routeLine) return null;
+    const where = new Map(stages.map((stage) => [stage.id, stage.place]));
+    const points = [
+      savedRoute.live ? { lat: savedRoute.live.lat, lng: savedRoute.live.lng } : day.data.start,
+      ...savedRoute.visits.flatMap((visit) => {
+        const place = where.get(visit.stageId);
+        return place ? [{ lat: place.lat, lng: place.lng }] : [];
+      }),
+      day.data.end,
+    ];
+    // A public transport day knows each leg; any other day travels every leg the same way.
+    const dayMode: RouteLeg['mode'] =
+      day.data.travelMode === 'driving'
+        ? 'drive'
+        : day.data.travelMode === 'walking'
+          ? 'walk'
+          : 'transit';
+    const modes = points.slice(1).map((_, i) => savedRoute.legs?.[i]?.mode ?? dayMode);
+    return buildRouteLegs({ line: savedRoute.routeLine, points, modes });
+  }, [day.data, savedRoute, stages]);
+
+  // Choosing a stop on the map brings its row into view in the plan.
+  useEffect(() => {
+    if (!selectedId) return;
+    document.querySelector('[aria-current="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [selectedId]);
 
   if (day.isPending) return <p role="status">Loading the day…</p>;
   if (day.isError || !day.data) {
@@ -273,7 +294,10 @@ export function DayScreen() {
     <div className="day-screen" data-layout={wide ? 'wide' : 'narrow'}>
       <MapView
         markers={markers}
-        routeLine={savedRoute?.routeLine ?? null}
+        route={routeLegs}
+        baseStyle={day.data.travelMode === 'transit' ? 'transit' : 'default'}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
         animateRoute={animate}
         padding={wide ? COMPUTER_PADDING : PHONE_PADDING}
       />
@@ -373,6 +397,8 @@ export function DayScreen() {
               stopPlaces={stopPlaces}
               dayId={day.data.id}
               doneStops={doneStops}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
               droppedStops={droppedStops}
               onMakeMust={(id) =>
                 updateStage.mutate({ id, priority: 'must' }, { onSuccess: () => findRoute('full') })
@@ -450,9 +476,16 @@ export function DayScreen() {
             ) : (
               <ul aria-label="Stops" className="stop-list">
                 {stages.map((stage) => (
-                  <li key={stage.id}>
+                  <li key={stage.id} aria-current={selectedId === stage.id ? 'true' : undefined}>
                     <CategoryIcon category={stage.category} />
-                    <span className="stop-list__name">{stage.place.name}</span>
+                    <button
+                      type="button"
+                      className="stop-list__name stop-list__select"
+                      aria-pressed={selectedId === stage.id}
+                      onClick={() => setSelectedId(selectedId === stage.id ? null : stage.id)}
+                    >
+                      {stage.place.name}
+                    </button>
                     <RadioChips
                       label={`Priority for ${stage.place.name}`}
                       className="priority-chips"

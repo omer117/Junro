@@ -231,7 +231,7 @@ describe('stops that did not fit today', () => {
       const senso = lastMarkers().find((m) => m.name === 'Senso-ji');
       const ueno = lastMarkers().find((m) => m.name === 'Ueno ramen');
       expect(senso?.number).toBe(1);
-      expect(ueno).toMatchObject({ dropped: true });
+      expect(ueno).toMatchObject({ state: 'dropped' });
       expect(ueno?.number).toBeUndefined();
     });
   });

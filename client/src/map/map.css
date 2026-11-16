@@ -36,10 +36,33 @@
   pointer-events: none;
 }
 
+/* A stop is a real button: it can be tapped to find it in the plan. At least 44px to hit. */
+.map-marker--stage {
+  z-index: 2;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    opacity 0.3s ease,
+    transform 0.15s ease;
+}
+
+.map-marker--stage:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
 /* A stop, before there is a route: its category icon in a rounded square. */
 .map-marker--stop {
-  width: 44px;
-  height: 44px;
+  width: var(--tap);
+  height: var(--tap);
   background: var(--surface);
   color: var(--ink);
   border: 3px solid var(--accent);
@@ -47,53 +70,155 @@
   box-shadow: var(--shadow-float);
 }
 
-/* A stop in the route: its number in a dark circle. */
+/* A stop in the route: its number, large, in a dark circle. */
 .map-marker--numbered {
-  width: 40px;
-  height: 40px;
+  width: var(--tap);
+  height: var(--tap);
   background: var(--ink);
   color: var(--on-ink);
   border: 3px solid var(--surface);
   border-radius: 50%;
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   box-shadow: var(--shadow-float);
 }
 
-/* A stop that did not fit today: hollow with a dashed edge (and the words in its label). */
-.map-marker--dropped {
-  background: var(--surface);
-  color: var(--ink-muted);
-  border: 2px dashed var(--ink-muted);
+.map-marker__number {
+  line-height: 1;
 }
 
-/* A stop with a problem. The colour is backed by the warning text and icon in the timeline. */
+/* The category, as a small round badge on the top right edge. */
+.map-marker__category,
+.map-marker__state {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.map-marker__category {
+  top: -6px;
+  right: -6px;
+}
+
+/* The state, as a badge on the bottom right edge: a picture here, and the words in the label. */
+.map-marker__state {
+  right: -6px;
+  bottom: -6px;
+}
+
+/* next: an accent ring, a little bigger, and a soft pulse. */
+.map-marker--next {
+  width: 48px;
+  height: 48px;
+  border-color: var(--accent);
+  border-width: 4px;
+  animation: map-marker-pulse 2s ease-out infinite;
+}
+
+/* done: greyed out, with a check. */
 .map-marker--done {
   background: var(--line);
   color: var(--ink-muted);
   border-color: var(--line);
 }
 
-.map-marker--warning {
+.map-marker--done .map-marker__state {
+  background: var(--ink);
+  color: var(--on-ink);
+  border-color: var(--ink);
+}
+
+/* late: a real problem with the opening hours. Warning colour, a triangle, and words elsewhere. */
+.map-marker--late {
   background: var(--warning);
   color: var(--on-warning);
 }
 
-.map-marker--stop.map-marker--warning {
+.map-marker--late.map-marker--stop {
   background: var(--surface);
   color: var(--ink);
   border-color: var(--warning);
 }
 
-/* The two ends of the day: a dark label above a small square on the exact spot. */
+.map-marker--late .map-marker__state {
+  background: var(--surface);
+  color: var(--warning-text);
+  border-color: var(--warning);
+}
+
+/* waiting: not a problem, so the colour stays calm; the clock badge says it. */
+.map-marker--waiting .map-marker__state {
+  color: var(--ink);
+}
+
+/* dropped: hollow with a dashed edge, no number. */
+.map-marker--dropped {
+  background: var(--surface);
+  color: var(--ink-muted);
+  border: 2px dashed var(--ink-muted);
+  border-radius: var(--radius-sm);
+}
+
+/* The chosen stop is bigger and has an accent ring. */
+.map-marker--selected {
+  z-index: 3;
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow:
+    0 0 0 4px var(--accent),
+    var(--shadow-float);
+}
+
+@keyframes map-marker-pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 rgb(245 154 74 / 0.55),
+      var(--shadow-float);
+  }
+  100% {
+    box-shadow:
+      0 0 0 14px rgb(245 154 74 / 0),
+      var(--shadow-float);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-marker--next {
+    animation: none;
+  }
+
+  .map-marker--stage {
+    transition: none;
+  }
+}
+
+/* The two ends of the day: a dark label above a small square on the exact spot. They sit under the
+   stops, so a stop at the hotel is never hidden. */
 .map-marker--start,
 .map-marker--end,
 .map-marker--loop {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   transform: translate(-50%, calc(-100% - 8px));
   padding: var(--space-1) var(--space-3);
   background: var(--ink);
   color: var(--on-ink);
   border-radius: var(--radius-pill);
   font-size: var(--text-sm);
+}
+
+.map-marker__icon {
+  display: inline-flex;
+}
+
+.map-marker__text {
+  display: grid;
 }
 
 .map-marker--start::after,
@@ -114,10 +239,9 @@
 /* Start and end on the same spot: two lines in one pin. */
 .map-marker--loop {
   border-radius: var(--radius-sm);
-  text-align: center;
   line-height: 1.3;
 }
 
-.map-marker--loop span {
+.map-marker--loop .map-marker__text span {
   display: block;
 }

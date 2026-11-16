@@ -21,6 +21,8 @@ export function RouteSummary({
   onToggleDone,
   droppedStops = [],
   onMakeMust,
+  selectedId = null,
+  onSelect,
 }: {
   route: RouteResult;
   day: DayFacts & {
@@ -41,6 +43,10 @@ export function RouteSummary({
   droppedStops?: Array<{ id: string; name: string }>;
   /** Makes a left-out stop a must and calculates the day again. */
   onMakeMust?: (stageId: string) => void;
+  /** The stop chosen on the map (or here). */
+  selectedId?: string | null;
+  /** Choosing a stop here shows it on the map. */
+  onSelect?: (stageId: string | null) => void;
 }) {
   // After a replan mid-day the route starts where the person was, at that time.
   const startTime = route.live ? route.live.time : day.startTime;
@@ -164,9 +170,21 @@ export function RouteSummary({
             <Fragment key={visit.stageId}>
               <li
                 className={notes.length > 0 ? 'timeline__row timeline__row--warn' : 'timeline__row'}
+                aria-current={selectedId === visit.stageId ? 'true' : undefined}
               >
                 <span className="timeline__dot" aria-hidden="true" />
-                <span className="timeline__name">{name}</span>
+                {onSelect ? (
+                  <button
+                    type="button"
+                    className="timeline__name timeline__select"
+                    aria-pressed={selectedId === visit.stageId}
+                    onClick={() => onSelect(selectedId === visit.stageId ? null : visit.stageId)}
+                  >
+                    {name}
+                  </button>
+                ) : (
+                  <span className="timeline__name">{name}</span>
+                )}
                 <span className="timeline__time">{formatClock(visit.arrival)}</span>
                 {onToggleDone && (
                   <button

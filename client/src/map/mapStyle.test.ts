@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MAP_COLOURS, mapStyle } from './mapStyle';
+import { MAP_COLOURS, mapStyle, transitStyle } from './mapStyle';
 
 const tokens = readFileSync(join(import.meta.dirname, '../styles/tokens.css'), 'utf-8');
 const token = (name: string) =>
@@ -28,5 +28,22 @@ describe('map style', () => {
   it('hides businesses and transit so only the stops the user chose stand out', () => {
     expect(rule('poi.business', 'all')?.stylers).toContainEqual({ visibility: 'off' });
     expect(rule('transit', 'all')?.stylers).toContainEqual({ visibility: 'off' });
+  });
+});
+
+describe('transitStyle', () => {
+  it('keeps the transit lines, faintly, and the station icons off', () => {
+    const line = transitStyle.find((rule) => rule.featureType === 'transit.line');
+    const station = transitStyle.find((rule) => rule.featureType === 'transit.station');
+
+    expect(line?.stylers).toContainEqual({ visibility: 'on' });
+    expect(station?.stylers).toContainEqual({ visibility: 'off' });
+    expect(transitStyle.some((rule) => rule.featureType === 'transit')).toBe(false);
+  });
+
+  it('is otherwise the same as the default style', () => {
+    const others = transitStyle.filter((rule) => !String(rule.featureType).startsWith('transit'));
+
+    expect(others).toEqual(mapStyle.filter((rule) => rule.featureType !== 'transit'));
   });
 });

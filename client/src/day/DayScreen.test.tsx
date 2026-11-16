@@ -119,7 +119,7 @@ describe('DayScreen', () => {
     const markers = lastMarkers();
     // The day starts and ends at the same hotel, so the map gets one joined pin.
     expect(markers.find((m) => m.kind === 'loop')).toMatchObject({
-      label: 'Start · 9:00',
+      label: 'Hotel · 9:00',
       endLabel: 'End · Hotel',
     });
     expect(markers.filter((m) => m.kind === 'stage').map((m) => m.name)).toEqual([

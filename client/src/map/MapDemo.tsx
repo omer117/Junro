@@ -43,7 +43,7 @@ export function MapDemo() {
   const [numbered, setNumbered] = useState(false);
   const markers = SAMPLE.map((marker, index) =>
     numbered && marker.kind === 'stage'
-      ? { ...marker, number: index, ...(marker.id === 'c' ? { warning: true } : {}) }
+      ? { ...marker, number: index, ...(marker.id === 'c' ? { state: 'late' as const } : {}) }
       : marker,
   );
 

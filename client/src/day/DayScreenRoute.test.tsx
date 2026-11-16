@@ -127,7 +127,7 @@ describe('Find my route', () => {
     expect(
       await screen.findByRole('heading', { name: 'Back at Hotel by 12:40' }),
     ).toBeInTheDocument();
-    await vi.waitFor(() => expect(lastRoute()).toEqual(['ENCODED-LINE', { animate: true }]));
+    await vi.waitFor(() => expect(lastRoute()).toEqual([expect.any(Array), { animate: true }]));
   });
 
   it('shows the saved route when the day is opened, with the line but without the animation', async () => {
@@ -139,7 +139,7 @@ describe('Find my route', () => {
     expect(
       await screen.findByRole('heading', { name: 'Back at Hotel by 12:40' }),
     ).toBeInTheDocument();
-    await vi.waitFor(() => expect(lastRoute()).toEqual(['ENCODED-LINE', { animate: false }]));
+    await vi.waitFor(() => expect(lastRoute()).toEqual([expect.any(Array), { animate: false }]));
   });
 
   it('marks a stop with a problem on the map, as well as in the timeline', async () => {
@@ -155,8 +155,8 @@ describe('Find my route', () => {
     expect(await screen.findByText(/about 12 min over/i)).toBeInTheDocument();
     await vi.waitFor(() => {
       const bad = lastMarkers().find((m) => m.id === 's2');
-      expect(bad?.warning).toBe(true);
-      expect(lastMarkers().find((m) => m.id === 's1')?.warning).toBeUndefined();
+      expect(bad?.state).toBe('late');
+      expect(lastMarkers().find((m) => m.id === 's1')?.state).not.toBe('late');
     });
   });
 

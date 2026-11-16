@@ -32,3 +32,17 @@ export const mapStyle: StyleRule[] = [
   { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: MAP_COLOURS.water }] },
 ];
+
+/**
+ * The same look for days on public transport: the transit lines stay on the map, faint, so the
+ * route makes sense, and the station icons stay off like every other icon.
+ */
+export const transitStyle: StyleRule[] = [
+  ...mapStyle.filter((rule) => rule.featureType !== 'transit'),
+  {
+    featureType: 'transit.line',
+    elementType: 'geometry',
+    stylers: [{ visibility: 'on' }, { saturation: -70 }, { lightness: 35 }],
+  },
+  { featureType: 'transit.station', elementType: 'all', stylers: [{ visibility: 'off' }] },
+];
