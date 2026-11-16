@@ -36,7 +36,7 @@ describe('the default palette', () => {
 });
 
 describe.each(palettes)('the palette "$id"', (palette) => {
-  const colours = {
+  const colours: Record<string, string> = {
     ...tokens,
     accent: palette.accent,
     'sky-warm': palette.skyWarm,

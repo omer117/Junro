@@ -452,3 +452,14 @@
   min-height: var(--tap);
   font-weight: 600;
 }
+
+/* A planned day carries the trip's colour: a soft tint behind the date and an accent edge. */
+.day-card--planned {
+  border-left: 3px solid var(--accent);
+}
+
+.day-card--planned .day-card__date {
+  padding: var(--space-1) var(--space-4) var(--space-1) var(--space-2);
+  background: var(--sky-warm);
+  border-radius: var(--radius-sm);
+}
