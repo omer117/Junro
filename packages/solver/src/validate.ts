@@ -35,12 +35,28 @@ export function validateInput(input: SolveInput): void {
     if (!Number.isFinite(stage.stayMinutes) || stage.stayMinutes < 0) {
       throw new InvalidInputError(`Stage ${stage.id}: stayMinutes must be a number >= 0`);
     }
-    const { window } = stage;
-    if (
-      window &&
-      !(Number.isFinite(window.open) && Number.isFinite(window.close) && window.close > window.open)
-    ) {
-      throw new InvalidInputError(`Stage ${stage.id}: the window must close after it opens`);
+    const { windows } = stage;
+    if (windows) {
+      if (windows.length === 0) {
+        throw new InvalidInputError(
+          `Stage ${stage.id}: windows must not be empty (omit it instead)`,
+        );
+      }
+      windows.forEach((window, i) => {
+        if (!(
+          Number.isFinite(window.open) &&
+          Number.isFinite(window.close) &&
+          window.close > window.open
+        )) {
+          throw new InvalidInputError(`Stage ${stage.id}: a window must close after it opens`);
+        }
+        const previous = windows[i - 1];
+        if (previous && window.open <= previous.close) {
+          throw new InvalidInputError(
+            `Stage ${stage.id}: windows must be sorted and apart (merge touching ones)`,
+          );
+        }
+      });
     }
   }
 }

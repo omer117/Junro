@@ -6,7 +6,7 @@ export interface LatLng {
   lng: number;
 }
 
-/** When a place is open. One window per stage per day in beta. */
+/** One stretch of time a place is open. A place can have several per day (lunch break). */
 export interface TimeWindow {
   open: Minutes;
   close: Minutes;
@@ -17,8 +17,12 @@ export interface Stage {
   location: LatLng;
   /** Already resolved: stage override -> user preference -> system minimum. */
   stayMinutes: number;
-  /** No window means always open. */
-  window?: TimeWindow;
+  /**
+   * The opening windows of the day: sorted, not touching, not empty. A visit fits inside ONE
+   * window (it never spans a break). Missing means always open. Windows may run past 1440 for a
+   * place that is open after midnight.
+   */
+  windows?: TimeWindow[];
   /** The place is closed on the whole day. A must stays in the route, flagged; an optional one is dropped. */
   closedAllDay?: boolean;
   /**
@@ -53,12 +57,14 @@ export interface Visit {
   departure: Minutes;
   /** Minutes spent waiting for the place to open. */
   waited: number;
+  /** The opening window this visit was planned in (missing when the place has no limit). */
+  window?: TimeWindow;
 }
 
 export type Violation =
   /** The visit would end after the place closes. */
   | { stageId: string; kind: 'closed'; minutesLate: number }
-  /** The stay is longer than the opening window itself; no order can fix it. */
+  /** The stay is longer than every opening window of the day; no order can fix it. */
   | { stageId: string; kind: 'window_too_short' }
   /** The place is closed on this whole day; no order can fix it. */
   | { stageId: string; kind: 'closed_all_day' }

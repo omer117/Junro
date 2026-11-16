@@ -25,6 +25,7 @@ describe('solve with opening hours', () => {
       serviceStart: 100,
       departure: 130,
       waited: 50,
+      window: { open: 100, close: 600 },
     });
     expect(result.endArrival).toBe(150);
   });
@@ -64,7 +65,9 @@ describe('solve with opening hours', () => {
     const feasibleEnds = permutations(stages.map((s) => s.id))
       .map((order) => evaluateOrder(input, order))
       .filter((r) =>
-        r.visits.every((v) => v.departure <= stages.find((s) => s.id === v.stageId)!.window!.close),
+        r.visits.every(
+          (v) => v.departure <= stages.find((s) => s.id === v.stageId)!.windows![0]!.close,
+        ),
       )
       .map((r) => r.endArrival);
 

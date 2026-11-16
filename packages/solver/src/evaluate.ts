@@ -1,13 +1,44 @@
 import type { Minutes, SolveInput, SolveResult, Stage, Violation, Visit } from './types.js';
 
-/** When service can start: on arrival, or when the place opens if we are early (we wait). */
-export function serviceStartFor(stage: Stage, arrival: Minutes): Minutes {
-  return stage.window && !stage.closedAllDay ? Math.max(arrival, stage.window.open) : arrival;
+export interface VisitTiming {
+  serviceStart: Minutes;
+  departure: Minutes;
+  /** Minutes past the closing time of the chosen window (0 if none). */
+  lateness: number;
+  /** Index of the chosen window, or -1 when the place has no limit. */
+  windowIndex: number;
 }
 
-/** Minutes by which a visit that ends at `departure` runs past the closing time (0 if none). */
-export function latenessOf(stage: Stage, departure: Minutes): number {
-  return stage.window && !stage.closedAllDay ? Math.max(0, departure - stage.window.close) : 0;
+/**
+ * The one rule for timing a visit, used by both `evaluateOrder` and the DP so they cannot disagree.
+ *
+ * For each opening window: we start at max(arrival, open) (we wait if early) and would be late by
+ * max(0, start + stay - close). We take the window with the least lateness, the earliest on a tie.
+ * So: the earliest window the whole stay fits in (waiting if needed), else the least late one.
+ *
+ * Both `departure` and `lateness` never go down when the arrival goes up. That is what keeps the
+ * DP exact: arriving earlier is never worse.
+ */
+export function visitAt(stage: Stage, arrival: Minutes): VisitTiming {
+  const windows = stage.windows;
+  if (!windows || windows.length === 0 || stage.closedAllDay) {
+    return {
+      serviceStart: arrival,
+      departure: arrival + stage.stayMinutes,
+      lateness: 0,
+      windowIndex: -1,
+    };
+  }
+  let best: VisitTiming | null = null;
+  for (let k = 0; k < windows.length; k++) {
+    const window = windows[k]!;
+    const serviceStart = Math.max(arrival, window.open);
+    const departure = serviceStart + stage.stayMinutes;
+    const lateness = Math.max(0, departure - window.close);
+    if (!best || lateness < best.lateness)
+      best = { serviceStart, departure, lateness, windowIndex: k };
+  }
+  return best!;
 }
 
 /**
@@ -32,20 +63,26 @@ export function evaluateOrder(input: SolveInput, order: string[]): SolveResult {
     if (!stage) throw new Error(`Unknown stage id: ${id}`);
 
     const arrival = time + input.travelTime(position, stage.location, time);
-    const serviceStart = serviceStartFor(stage, arrival);
-    const departure = serviceStart + stage.stayMinutes;
-    visits.push({ stageId: id, arrival, serviceStart, departure, waited: serviceStart - arrival });
+    const { serviceStart, departure, lateness: minutesLate, windowIndex } = visitAt(stage, arrival);
+    visits.push({
+      stageId: id,
+      arrival,
+      serviceStart,
+      departure,
+      waited: serviceStart - arrival,
+      ...(windowIndex >= 0 ? { window: stage.windows![windowIndex]! } : {}),
+    });
 
     // Closed all day is a flag only: it adds no lateness, so it cannot bend the order of the
     // other stages (it would be the same penalty in every order).
-    const minutesLate = latenessOf(stage, departure);
     if (stage.closedAllDay) {
       violations.push({ stageId: id, kind: 'closed_all_day' });
     } else if (minutesLate > 0) {
       totalLateness += minutesLate;
-      // A stay longer than the whole window can never be fixed by reordering.
-      const windowTooShort =
-        stage.window && stage.stayMinutes > stage.window.close - stage.window.open;
+      // A stay longer than every window of the day can never be fixed by reordering.
+      const windowTooShort = stage.windows!.every(
+        (window) => stage.stayMinutes > window.close - window.open,
+      );
       violations.push(
         windowTooShort
           ? { stageId: id, kind: 'window_too_short' }

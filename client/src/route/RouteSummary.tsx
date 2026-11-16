@@ -3,7 +3,7 @@ import { Fragment } from 'react';
 import { formatClock } from '../lib/dates';
 import { formatDuration } from '../lib/duration';
 import { googleMapsDirectionsUrl, type DirectionsPoint } from '../lib/mapsLink';
-import { describeRoute, stopNotes, type DayFacts } from './describe';
+import { describeRoute, openTodayText, stopNotes, type DayFacts } from './describe';
 import { LegWays } from './LegWays';
 import type { RouteResult } from './types';
 
@@ -156,7 +156,9 @@ export function RouteSummary({
         {!route.live && doneRows}
         {legAfter(0)}
         {route.visits.map((visit, visitIndex) => {
-          const notes = stopNotes(visit, route.violations);
+          const windows = route.openToday?.[visit.stageId];
+          const notes = stopNotes(visit, route.violations, windows);
+          const openText = openTodayText(windows);
           const name = stopNames.get(visit.stageId) ?? 'Stop';
           return (
             <Fragment key={visit.stageId}>
@@ -176,6 +178,7 @@ export function RouteSummary({
                     Done
                   </button>
                 )}
+                {openText && <p className="timeline__open">{openText}</p>}
                 {notes.map((note) => (
                   <p key={note} className="timeline__note">
                     <CircleAlert size={16} aria-hidden="true" />

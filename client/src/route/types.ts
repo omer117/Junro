@@ -21,6 +21,12 @@ export interface TransitOption {
   steps: TransitStep[];
 }
 
+/** One stretch of time a place is open, in minutes since midnight (may pass 1440). */
+export interface TimeWindow {
+  open: number;
+  close: number;
+}
+
 export interface Visit {
   stageId: string;
   /** Minutes since midnight. */
@@ -30,6 +36,8 @@ export interface Visit {
   departure: number;
   /** Minutes spent waiting for the place to open. */
   waited: number;
+  /** The opening window the visit was planned in (missing when the place has no limit). */
+  window?: TimeWindow;
 }
 
 export type Violation =
@@ -51,6 +59,8 @@ export interface RouteResult {
   totalLateness: number;
   /** Ids of the stops left out because they did not fit (they are never left out silently). */
   dropped?: string[];
+  /** When each stop is open today: its windows, an empty list if closed all day, null for no limit. */
+  openToday?: Record<string, TimeWindow[] | null>;
   /** Set when the day was replanned mid-day: where the person was, and the time (minutes). */
   live: { lat: number; lng: number; time: number } | null;
   /**
