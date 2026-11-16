@@ -1,4 +1,4 @@
-import type { LatLng, Stage, TimeWindow } from '@junro/solver';
+import { pinWindow, type LatLng, type Stage, type TimeWindow } from '@junro/solver';
 import { asc, eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { categoryPreferences, places, stages, type LiveFrom, type days } from '../db/schema.js';
@@ -42,17 +42,25 @@ export async function loadDayProblem(db: Db, userId: string, day: DayRow): Promi
     .where(eq(categoryPreferences.userId, userId));
   const preferred = new Map(preferences.map((p) => [p.category, p.stayMinutes]));
 
-  const solverStages: Stage[] = rows.map(({ stage, place }) => ({
-    id: stage.id,
-    location: { lat: place.lat, lng: place.lng },
-    stayMinutes: resolveStayMinutes({
+  const solverStages: Stage[] = rows.map(({ stage, place }) => {
+    const stayMinutes = resolveStayMinutes({
       category: stage.category,
       preference: preferred.get(stage.category),
       override: stage.stayOverrideMinutes,
-    }),
-    priority: stage.priority,
-    ...windowsForDate(place.openingHours as OpeningHours | null, day.date),
-  }));
+    });
+    return {
+      id: stage.id,
+      location: { lat: place.lat, lng: place.lng },
+      stayMinutes,
+      // A booked place is a must, and its booking replaces the place's own opening hours.
+      ...(stage.pinnedTime !== null
+        ? { priority: 'must' as const, windows: [pinWindow(stage.pinnedTime, stayMinutes)] }
+        : {
+            priority: stage.priority,
+            ...windowsForDate(place.openingHours as OpeningHours | null, day.date),
+          }),
+    };
+  });
 
   const savedIds = rows
     .filter((r) => r.stage.position !== null)

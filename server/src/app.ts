@@ -14,6 +14,7 @@ import { airportsRouter } from './routes/airports.js';
 import { daysRouter } from './routes/days.js';
 import { legsRouter } from './routes/legs.js';
 import { routeRouter } from './routes/route.js';
+import { segmentsRouter } from './routes/segments.js';
 import { solveRouter } from './routes/solve.js';
 import { stagesRouter } from './routes/stages.js';
 import { stayDurationsRouter } from './routes/stay-durations.js';
@@ -114,6 +115,7 @@ export function createApp(deps: AppDeps): Express {
       limiter: createRateLimiter({ limit: deps.solveRateLimit ?? 10, windowMs: 60_000 }),
     }),
   );
+  app.use(segmentsRouter(deps.db));
   app.use(stagesRouter(deps.db));
   app.use(stayDurationsRouter(deps.db));
 

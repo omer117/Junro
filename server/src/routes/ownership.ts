@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
-import { days, stages, trips } from '../db/schema.js';
+import { days, segments, stages, trips } from '../db/schema.js';
 import { notFoundError } from './helpers.js';
 
 /**
@@ -30,9 +30,21 @@ export async function requireOwnedStage(db: Db, userId: string, stageId: string)
   const [row] = await db
     .select({ stage: stages })
     .from(stages)
-    .innerJoin(days, eq(stages.dayId, days.id))
-    .innerJoin(trips, eq(days.tripId, trips.id))
+    // A stage is on a day, or waits in the pool of a stay: either way it leads to a trip.
+    .leftJoin(days, eq(stages.dayId, days.id))
+    .leftJoin(segments, eq(stages.segmentId, segments.id))
+    .innerJoin(trips, eq(trips.id, sql`coalesce(${days.tripId}, ${segments.tripId})`))
     .where(and(eq(stages.id, stageId), eq(trips.userId, userId)));
   if (!row) throw notFoundError();
   return row.stage;
+}
+
+export async function requireOwnedSegment(db: Db, userId: string, segmentId: string) {
+  const [row] = await db
+    .select({ segment: segments })
+    .from(segments)
+    .innerJoin(trips, eq(segments.tripId, trips.id))
+    .where(and(eq(segments.id, segmentId), eq(trips.userId, userId)));
+  if (!row) throw notFoundError();
+  return row.segment;
 }

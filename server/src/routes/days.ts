@@ -57,6 +57,7 @@ export function toDay(row: DayRow, stageCount: number) {
   return {
     id: row.id,
     tripId: row.tripId,
+    segmentId: row.segmentId,
     date: row.date,
     start: { lat: row.startLat, lng: row.startLng },
     end: { lat: row.endLat, lng: row.endLng },
