@@ -119,8 +119,9 @@ two minutes.
 
 ## After beta (not now)
 
-Public transit, automatic stage dropping by priority, more sign-in providers, arrival
-auto-detection, per-country palettes, several opening windows per stage per day (places
-that close for a lunch break; beta uses one window, earliest opening to latest closing),
-modern map markers and cloud-based map styling with a Map ID (beta uses a JSON style and SVG
-markers).
+Done since the beta list was written: automatic stage dropping by priority (m8), several
+opening windows per stage per day (m9), splitting a multi-day stay across days (m10), more
+sign-in providers (m12), modern map markers (m13), per-country palettes (m14).
+
+Still not now: public transit, arrival auto-detection, cloud-based map styling with a Map ID
+(beta and after use a JSON style and SVG markers).
