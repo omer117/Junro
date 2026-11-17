@@ -11,7 +11,7 @@ tells you which way to walk next.
 
 ## Live demo
 
-**https://junro.vercel.app** (sign in with Google).
+**https://junro.vercel.app** (sign in with Google, GitHub, or a personal Microsoft account).
 
 ## What it does
 
@@ -26,6 +26,11 @@ tells you which way to walk next.
   (the new stop goes where it adds the least time) or _recalculate everything_.
 - **A day in progress.** Mark stops as done, then _recalculate from here_: Junro plans the rest
   of the day from where you are, at the current time, back to the same end point.
+- **A multi-day stay.** Add a stay (a hotel for several nights) and drop places into its pool;
+  Junro splits them across the free days, balancing each day's length and respecting bookings
+  and pins, before solving each day's order exactly.
+- **The trip's colours.** Each trip takes its accent from its destination country, on the trips
+  home, the day screen and the route line; warnings always stay the same colour.
 
 ## How it works
 
