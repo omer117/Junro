@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateOrder } from './evaluate.js';
-import { solve } from './solve.js';
+import { evaluateOrder } from '../evaluate.js';
+import { solve } from '../solve.js';
 import { lineTravel, loc, permutations, seededRandom, stageAt } from './test-utils.js';
-import type { SolveInput, Stage } from './types.js';
-import { UnreachableError } from './validate.js';
+import type { SolveInput, Stage } from '../types.js';
+import { UnreachableError } from '../validate.js';
 
 const must = (id: string, x: number, stay: number, window?: { open: number; close: number }) =>
   ({ ...stageAt(id, x, stay, window), priority: 'must' }) satisfies Stage;

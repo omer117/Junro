@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { InvalidInputError, solve } from './index.js';
+import { InvalidInputError, solve } from '../index.js';
 import { lineTravel, loc } from './test-utils.js';
-import type { TimeWindow } from './types.js';
+import type { TimeWindow } from '../types.js';
 
 const solveWith = (windows: TimeWindow[]) =>
   solve({

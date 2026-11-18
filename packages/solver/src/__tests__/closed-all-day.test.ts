@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { solve } from './solve.js';
+import { solve } from '../solve.js';
 import { lineTravel, loc, stageAt } from './test-utils.js';
-import type { SolveInput, Stage } from './types.js';
+import type { SolveInput, Stage } from '../types.js';
 
 const base = (stages: Stage[]): SolveInput => ({
   start: loc(0),

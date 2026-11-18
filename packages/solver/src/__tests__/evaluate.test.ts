@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateOrder } from './evaluate.js';
+import { evaluateOrder } from '../evaluate.js';
 import { lineTravel, loc, stageAt } from './test-utils.js';
-import type { LatLng, SolveInput } from './types.js';
+import type { LatLng, SolveInput } from '../types.js';
 
 describe('evaluateOrder', () => {
   const input: SolveInput = {

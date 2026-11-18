@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { solve } from './solve.js';
+import { solve } from '../solve.js';
 import { lineTravel, loc, seededRandom, stageAt } from './test-utils.js';
-import type { SolveInput } from './types.js';
+import type { SolveInput } from '../types.js';
 
 function randomDay(count: number, seed: number): SolveInput {
   const rand = seededRandom(seed);

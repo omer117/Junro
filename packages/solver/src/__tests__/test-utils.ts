@@ -1,4 +1,4 @@
-import type { LatLng, Stage, TimeWindow, TravelTimeFn } from './types.js';
+import type { LatLng, Stage, TimeWindow, TravelTimeFn } from '../types.js';
 
 /** Test helper: a point on a line. Position `x` is also the distance in minutes. */
 export const loc = (x: number): LatLng => ({ lat: 0, lng: x });
