@@ -29,6 +29,15 @@ tells you which way to walk next.
 - **A multi-day stay.** Add a stay (a hotel for several nights) and drop places into its pool;
   Junro splits them across the free days, balancing each day's length and respecting bookings
   and pins, before solving each day's order exactly.
+- **Public transport.** A day can use transit instead of walking or driving; Junro walks the
+  short legs and asks Google for transit directions on the rest, and says plainly when a
+  destination has no public transport in Google's data (Japan, South Korea).
+- **Stops that don't fit.** Optional stops are dropped by priority, lowest first, only when
+  keeping them would make the day run late — never silently, and never a stop marked "must".
+- **Several opening windows a day.** A place that closes for a midday break (or opens again in
+  the evening) is handled with its real opening windows, not one block.
+- **More ways to sign in.** Google, GitHub or a personal Microsoft account, with sign-in methods
+  linked to the same account from Settings.
 - **The trip's colours.** Each trip takes its accent from its destination country, on the trips
   home, the day screen and the route line; warnings always stay the same colour.
 
@@ -77,9 +86,13 @@ no known fast exact solution, but a day has few stops (at most 15), so Junro sol
 
 ## Status
 
-Beta, deployed. Done: repository setup (M0), the solver (M1), the server core (M2), the Google
-integration (M3), the client (M4), a day in progress (M5) and the deployment (M6). Public transit
-is next, after the beta.
+Beta, deployed, and past the original beta scope. Done: repository setup (M0), the solver (M1),
+the server core (M2), the Google integration (M3), the client (M4), a day in progress (M5), the
+deployment (M6), public transit (M7), dropping stops that don't fit (M8), several opening windows
+a day (M9), splitting a multi-day stay (M10), a shared Redis cache and rate limiter (M11), more
+sign-in providers (M12), map markers with state (M13) and colours by destination country (M14).
+Still not built: arrival auto-detection, and a cloud-based map style with a Map ID (the map is a
+static JSON style with SVG markers for now).
 
 ## Tech stack
 
