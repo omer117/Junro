@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { insertStage, removeStage } from './insert.js';
-import { solve } from './solve.js';
+import { insertStage, removeStage } from '../insert.js';
+import { solve } from '../solve.js';
 import { lineTravel, loc, stageAt } from './test-utils.js';
-import { InvalidInputError } from './validate.js';
-import type { SolveInput } from './types.js';
+import { InvalidInputError } from '../validate.js';
+import type { SolveInput } from '../types.js';
 
 const base = (stages: SolveInput['stages']): SolveInput => ({
   start: loc(0),

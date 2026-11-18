@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { visitAt } from './evaluate.js';
+import { visitAt } from '../evaluate.js';
 import { loc } from './test-utils.js';
-import type { Stage, TimeWindow } from './types.js';
+import type { Stage, TimeWindow } from '../types.js';
 
 // Lunch place: open 11:30-14:30 and 17:30-22:00.
 const lunch: TimeWindow[] = [

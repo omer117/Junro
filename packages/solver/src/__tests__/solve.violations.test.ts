@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateOrder } from './evaluate.js';
-import { solve } from './solve.js';
+import { evaluateOrder } from '../evaluate.js';
+import { solve } from '../solve.js';
 import { lineTravel, loc, permutations, seededRandom, stageAt } from './test-utils.js';
-import type { SolveInput } from './types.js';
+import type { SolveInput } from '../types.js';
 
 describe('solve when not everything fits', () => {
   it('keeps every stage and flags the one that has to be late', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SolveInput, Stage } from './index.js';
+import type { SolveInput, Stage } from '../index.js';
 import { lineTravel, loc, stageAt } from './test-utils.js';
 
 describe('test utils', () => {

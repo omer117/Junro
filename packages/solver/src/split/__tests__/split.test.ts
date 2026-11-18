@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { solve } from '../solve.js';
-import { lineTravel, loc, seededRandom } from '../test-utils.js';
-import type { SolveResult, Stage } from '../types.js';
-import { pinWindow } from './pin.js';
-import { DEFAULT_SPLIT_BUDGET, splitSegment } from './split.js';
-import type { SplitDay, SplitInput, SplitPlace } from './types.js';
+import { solve } from '../../solve.js';
+import { lineTravel, loc, seededRandom } from '../../__tests__/test-utils.js';
+import type { SolveResult, Stage } from '../../types.js';
+import { pinWindow } from '../pin.js';
+import { DEFAULT_SPLIT_BUDGET, splitSegment } from '../split.js';
+import type { SplitDay, SplitInput, SplitPlace } from '../types.js';
 
 const day = (id: string, extra: Partial<SplitDay> = {}): SplitDay => ({
   id,
